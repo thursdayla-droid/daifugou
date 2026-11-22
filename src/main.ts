@@ -490,20 +490,23 @@ function renderGame(v: PlayerView) {
         .join('')}</div>
       <div class="badges">${badges.join('')}</div>
     </div>
-    <div class="center">
+    <div class="center">${
+      mode
+        ? pickPanel(v, mode)
+        : `
       <div class="field ${fieldCards.length > 3 ? 'many' : ''}">${
         fieldCards.length ? fieldCards.map((c) => cardHtml(c)).join('') : '<div class="field-empty">場は 空です</div>'
       }</div>
       <div class="fieldby">${v.field && v.fieldOwner !== null ? `${esc(v.players[v.fieldOwner].name)} が 出しました` : ''}</div>
-      <div class="turnmsg ${t.mine ? 'mine' : ''}">${esc(toast || t.text)}</div>
-    </div>
+      <div class="turnmsg ${t.mine ? 'mine' : ''}">${esc(toast || t.text)}</div>`
+    }</div>
     <div class="bottom">
-      <div class="log">${logLines.map((e) => `<div>${esc(e.text)}</div>`).join('')}</div>
+      ${mode ? '' : `<div class="log">${logLines.map((e) => `<div>${esc(e.text)}</div>`).join('')}</div>`}
       <div class="actions">${
         playing
           ? `<button id="pass" class="ghost" ${v.field ? '' : 'disabled'}>パス</button><button id="play" ${selectedPlayOk(v) ? '' : 'disabled'}>出す</button>`
           : mode
-            ? `<button id="give" ${selected.size === mode.need ? '' : 'disabled'}>${mode.label}（${selected.size}/${mode.need}）</button>`
+            ? `<button id="give" class="big" ${selected.size === mode.need ? '' : 'disabled'}>${selected.size === mode.need ? mode.label : `あと ${mode.need - selected.size}枚 選ぶ`}</button>`
             : ''
       }</div>
       <div class="hand">${handHtml || '<div class="note">手札は ありません</div>'}</div>
@@ -557,18 +560,32 @@ function sheetHtml(v: PlayerView): string {
         <h2 class="gold-text">キングチャレンジ</h2>
         <p>墓地をシャッフルしました。<br>一番上のカードの マークは？</p>
         <div class="suitbtns">${SUITS.map((s) => `<button class="${s === 'H' || s === 'D' ? 'r' : ''}" data-guess="${s}">${SUIT_MARK[s]}</button>`).join('')}</div></div></div>`;
-    case 'give7':
-    case 'counterGive':
-    case 'ten':
-    case 'kingDiscard': {
-      const titles = { give7: '7渡し', counterGive: 'エースカウンター', ten: '10捨て', kingDiscard: 'キングチャレンジ 成功！' };
-      const m = selectionMode(v)!;
-      return `<div class="sheet-wrap low"><div class="sheet" style="padding:10px 14px">
-        <h2 class="gold-text" style="font-size:18px">${titles[p.type]}</h2>
-        <p>手札から ${m.need}枚 選んで「${m.label}」</p></div></div>`;
-    }
   }
   return '';
+}
+
+/** 手札からカードを選ぶ時（7渡し・エースカウンター・10捨て・キングチャレンジ成功）：
+ *  真ん中に 何をするかと 選んだカードを 大きく出す（ほかの文字は 出さない） */
+function pickPanel(v: PlayerView, mode: { need: number; label: string }): string {
+  const p = v.pending!;
+  const who = (i: number) => esc(v.players[i].name);
+  const info: Record<string, [string, string]> = {
+    give7: ['7渡し', p.type === 'give7' ? `${who(p.to)} に 渡す<br>カードを ${mode.need}枚 選んでください` : ''],
+    counterGive: ['エースカウンター', p.type === 'counterGive' ? `${who(p.to)} に 渡す<br>カードを 1枚 選んでください` : ''],
+    ten: ['10捨て', `墓地に 捨てる<br>カードを ${mode.need}枚 選んでください`],
+    kingDiscard: ['キングチャレンジ 成功！', `墓地に 捨てる<br>カードを ${mode.need}枚 選んでください`],
+  };
+  const [title, desc] = info[p.type];
+  const chosen = v.hand.filter((c) => selected.has(c.id));
+  const slots = Array.from({ length: mode.need }, (_, i) =>
+    chosen[i] ? cardHtml(chosen[i], 'tap', `data-unpick="${chosen[i].id}"`) : '<div class="slot"></div>',
+  ).join('');
+  return `<div class="pick">
+    <div class="pick-t gold-text">${title}</div>
+    <div class="pick-d">${desc}</div>
+    <div class="pick-slots">${slots}</div>
+    <div class="pick-h">下の手札を タップして 選ぶ（もう一度 タップで 戻す）</div>
+  </div>`;
 }
 
 function resultHtml(v: PlayerView): string {
@@ -591,8 +608,8 @@ function bindGame(v: PlayerView, mode: { need: number } | null) {
       if (selected.has(id)) selected.delete(id);
       else {
         if (mode && selected.size >= mode.need) {
-          if (mode.need === 1) selected.clear();
-          else return;
+          // いっぱいの時は 最初に選んだカードと 入れかえ
+          selected.delete([...selected][0]);
         }
         if (myTurnPlay(v)) autoSelect(v, id);
         else selected.add(id);
@@ -612,6 +629,10 @@ function bindGame(v: PlayerView, mode: { need: number } | null) {
   on('#give', () => {
     ctrl!.send({ type: 'cards', cards: [...selected] });
     selected.clear();
+  });
+  on('[data-unpick]', (el) => {
+    selected.delete(el.dataset.unpick!);
+    renderGame(v);
   });
   on('[data-pick]', (el) => ctrl!.send({ type: 'pick', cardId: el.dataset.pick || null }));
   on('[data-trade]', (el) => ctrl!.send({ type: 'tradePick', index: Number(el.dataset.trade) }));

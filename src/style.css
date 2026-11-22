@@ -214,3 +214,13 @@ body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx
 
 /* めくり画面は 左右に動かさない（capIn は 真ん中寄せの帯用で、左に半分ずれていた） */
 @keyframes revealIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* 手札から選ぶ時の 真ん中の案内（2026-11-22 依頼者「文字が重なって 操作しにくい」） */
+.pick { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 16px; margin: 0 12px; border-radius: 18px;
+  background: rgba(20,16,9,.92); border: 1.5px solid var(--gold); box-shadow: 0 8px 30px rgba(0,0,0,.6); max-width: 380px; width: calc(100% - 24px); }
+.pick-t { font-size: 24px; font-weight: 900; }
+.pick-d { word-break: keep-all; font-size: 16px; font-weight: 800; text-align: center; line-height: 1.5; color: #fff; }
+.pick-slots { --cw: 66px; --ch: 99px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; min-height: 99px; }
+.pick-slots .slot { width: var(--cw); height: var(--ch); border-radius: 8px; border: 2px dashed rgba(212,175,55,.5); }
+.pick-h { font-size: 12px; color: var(--muted); text-align: center; }
+.actions button.big { min-width: 220px; font-size: 18px; padding: 14px 18px; }

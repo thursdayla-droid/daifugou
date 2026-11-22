@@ -92,6 +92,9 @@ def index(card, rank, suit):
     card.alpha_composite(d)
 
 
+FACE_BOX = (116, 178, 290, 378)
+
+
 def index_in_box(card, rank, suit, box):
     """絵札：消したマークの場所（box）に 文字とマーク（左上・右下）"""
     d = Image.new('RGBA', (W, H), (0, 0, 0, 0))
@@ -103,8 +106,13 @@ def index_in_box(card, rank, suit, box):
     size = 10
     while True:
         f = ImageFont.truetype(FONT, size + 4)
-        b2 = dr.textbbox((0, 0), txt, font=f)
-        if b2[3] - b2[1] > line or b2[2] - b2[0] > bw * 1.05:
+        # J・Q・K 全部 同じ大きさ（いちばん大きく見える文字に 合わせる）
+        too = False
+        for t in 'JQK':
+            b2 = dr.textbbox((0, 0), t, font=f)
+            if b2[3] - b2[1] > line or b2[2] - b2[0] > bw * 1.05:
+                too = True
+        if too:
             break
         size += 4
     f = ImageFont.truetype(FONT, size)
@@ -209,8 +217,9 @@ for s in SUITS:
         save(card, f'{s}{n}')
     # J・Q・K：依頼者の絵を そのまま 大きく（2026-11-22 依頼者「枠の大きさは戻して」）。隅のマークの場所に 文字
     for r in (11, 12, 13):
-        im, box = erase_corner_marks(f'{SRC}/{s}{r}.png', s)
-        index_in_box(im, r, s, box)
+        im, _box = erase_corner_marks(f'{SRC}/{s}{r}.png', s)
+        # 12枚 同じ場所・同じ大きさ（2026-11-22 依頼者「位置がバラバラ」）：どの絵でも 空いている 共通の場所
+        index_in_box(im, r, s, FACE_BOX)
         save(im, f'{s}{r}')
 
 # ジョーカー：依頼者の絵を そのまま。左の すき間に たてに JOKER
