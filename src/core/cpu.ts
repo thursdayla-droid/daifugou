@@ -26,8 +26,8 @@ export function cpuAction(v: PlayerView, rnd: () => number): Action {
   if (pd) {
     switch (pd.type) {
       case 'draw3': {
+        if (pd.asking) return { type: 'decide', use: true };
         const opts = pd.options ?? [];
-        if (opts.length === 0) return { type: 'pick', cardId: null };
         const sixes = hand.filter((c) => c.rank === 6).length;
         const six = opts.find((c) => c.rank === 6);
         if (six && sixes >= 2) return { type: 'pick', cardId: six.id };
@@ -55,7 +55,7 @@ export function cpuAction(v: PlayerView, rnd: () => number): Action {
   const score = (p: Play) => {
     let s = playStrength(p, inv) * 10 - p.count * 6;
     if (p.hasJoker) s += 60;
-    if (p.kind !== 'stair' && p.rank === 6) s += 25; // 6はエクゾディア用にとっておく
+    if (p.kind !== 'stair' && p.rank === 6) s += 25; // 6はケメゾディア用にとっておく
     if (p.count >= 4) s += hand.length > 8 ? 30 : -30; // 革命は 状況しだい
     return s;
   };

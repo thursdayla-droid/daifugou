@@ -81,20 +81,20 @@ describe('効果', () => {
     expect(s.players[1].hand.length).toBe(0);
     expect(s.players[0].hand.map((x) => x.id)).toContain('H6');
   });
-  it('エクゾディア', () => {
+  it('ケメゾディア', () => {
     const s = setup([['S9', 'H6', 'D6', 'C6'], ['S6', 'H2'], ['H4', 'D5']]);
     apply(s, 0, { type: 'play', cards: ['S9'] });
     apply(s, 0, { type: 'pick', cardId: 'S6' });
     expect(s.over).toBe(true);
     expect(s.ranking![0]).toBe(0);
   });
-  it('11バックはずっと続く', () => {
+  it('11バックは場が流れたら終わり', () => {
     const s = setup([['S11', 'S8', 'S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S11'] });
     apply(s, 1, { type: 'pass' });
     apply(s, 2, { type: 'pass' });
     expect(s.field).toBeNull();
-    expect(s.elevenBack).toBe(true);
+    expect(s.elevenBack).toBe(false);
   });
   it('階段も効果あり（7→8の順）', () => {
     const s = setup([['S7', 'S8', 'S9', 'H4', 'H3'], ['H5', 'H6'], ['D5', 'D6']]);
@@ -104,6 +104,17 @@ describe('効果', () => {
     expect(s.players[1].hand.map((x) => x.id)).toContain('H4');
     expect(s.field).toBeNull(); // 8で流れた
     expect(s.turn).toBe(0);
+  });
+  it('ドロー3：先に使うか選ぶ・使ったら必ず取る', () => {
+    const s = setup([['S3', 'S4'], ['H5', 'H6'], ['D5', 'D6']]);
+    s.graveyard = ['C9', 'C10'].map(c);
+    apply(s, 0, { type: 'play', cards: ['S3'] });
+    expect(s.pending).toMatchObject({ type: 'draw3', options: null });
+    apply(s, 0, { type: 'decide', use: true });
+    expect(s.pending?.type === 'draw3' && s.pending.options?.length).toBe(2);
+    expect(apply(s, 0, { type: 'pick', cardId: null })).not.toBeNull();
+    apply(s, 0, { type: 'pick', cardId: 'C9' });
+    expect(s.players[0].hand.map((x) => x.id)).toContain('C9');
   });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);

@@ -294,7 +294,7 @@ function turnText(v: PlayerView): { text: string; mine: boolean } {
   }
   if (p) {
     const what: Record<string, string> = {
-      draw3: '墓地のカードを見ています',
+      draw3: 'ドロー3を 使っています',
       trade: '交換するカードを選んでいます',
       counter: 'エースカウンターするか 考えています',
       counterGive: '渡すカードを選んでいます',
@@ -392,24 +392,28 @@ function sheetHtml(v: PlayerView): string {
   if (!p || p.player !== v.me) return '';
   switch (p.type) {
     case 'draw3':
+      if (p.asking)
+        return `<div class="sheet-wrap"><div class="sheet">
+        <h2 class="gold-text">ドロー3</h2>
+        <p>墓地からランダムで3枚 見て、1枚 手札に加えます。<br>使うと 必ず1枚 取ります。使いますか？</p>
+        <div class="row"><button class="ghost" data-decide="0">使わない</button><button data-decide="1">使う</button></div></div></div>`;
       return `<div class="sheet-wrap"><div class="sheet">
-        <h2 class="gold-text">ドロースリー</h2>
-        <p>墓地から出た ${p.options?.length ?? 0}枚。<br>1枚 手札に加えられます</p>
-        <div class="cards big">${(p.options ?? []).map((c) => cardHtml(c, 'tap', `data-pick="${c.id}"`)).join('')}</div>
-        <button class="ghost" data-pick="">取らない</button></div></div>`;
+        <h2 class="gold-text">ドロー3</h2>
+        <p>墓地から出た ${p.options?.length ?? 0}枚。<br>1枚 選んで 手札に加えてください</p>
+        <div class="cards big">${(p.options ?? []).map((c) => cardHtml(c, 'tap', `data-pick="${c.id}"`)).join('')}</div></div></div>`;
     case 'trade':
       return `<div class="sheet-wrap"><div class="sheet">
-        <h2 class="gold-text">トレードフォー</h2>
+        <h2 class="gold-text">トレード4</h2>
         <p>${esc(v.players[p.other].name)} の手札から 1枚 選んでください</p>
         <div class="cards">${Array.from({ length: p.count }, (_, i) => backHtml('tap', `data-trade="${i}"`)).join('')}</div></div></div>`;
     case 'counter':
       return `<div class="sheet-wrap"><div class="sheet">
         <h2 class="gold-text">エースカウンター</h2>
-        <p>${esc(v.players[p.giver].name)} から ナナ渡し（${p.count}枚）が来ます。<br>エースを1枚 捨てて、逆に 1枚 渡しますか？</p>
+        <p>${esc(v.players[p.giver].name)} から 7渡し（${p.count}枚）が来ます。<br>エースを1枚 捨てて、逆に 1枚 渡しますか？</p>
         <div class="row"><button class="ghost" data-counter="0">しない</button><button data-counter="1">する</button></div></div></div>`;
     case 'nine':
       return `<div class="sheet-wrap"><div class="sheet">
-        <h2 class="gold-text">リビングデッドのエクナイン</h2>
+        <h2 class="gold-text">リビングデッドのケメナイン</h2>
         <p>同じマークの 6 を 回収できます</p>
         <div class="cards big">${p.options
           .map((o) => `<div style="text-align:center">${cardHtml(cardFromId(o.cardId), 'tap', `data-pick="${o.cardId}"`)}<div class="note">${o.from === 'grave' ? '墓地' : esc(v.players[o.from].name)}</div></div>`)
@@ -424,7 +428,7 @@ function sheetHtml(v: PlayerView): string {
     case 'counterGive':
     case 'ten':
     case 'kingDiscard': {
-      const titles = { give7: 'ナナ渡し', counterGive: 'エースカウンター', ten: 'ジュ捨て', kingDiscard: 'キングチャレンジ 成功！' };
+      const titles = { give7: '7渡し', counterGive: 'エースカウンター', ten: '10捨て', kingDiscard: 'キングチャレンジ 成功！' };
       const m = selectionMode(v)!;
       return `<div class="sheet-wrap low"><div class="sheet" style="padding:10px 14px">
         <h2 class="gold-text" style="font-size:18px">${titles[p.type]}</h2>
@@ -437,7 +441,7 @@ function sheetHtml(v: PlayerView): string {
 function resultHtml(v: PlayerView): string {
   const r = v.ranking ?? [];
   return `<div class="sheet-wrap"><div class="sheet">
-    <h2 class="gold-text">${v.exodia !== null ? 'エクゾディア！' : '結果'}</h2>
+    <h2 class="gold-text">${v.exodia !== null ? 'ケメゾディア！' : '結果'}</h2>
     ${v.exodia !== null ? `<p>${esc(v.players[v.exodia].name)} が 6を4枚 そろえて 勝ち！</p>` : ''}
     <div class="result">${r
       .map((i, k) => `<div class="rk ${i === v.me ? 'me' : ''}"><span class="t">${rankTitle(k, r.length)}</span><span class="n">${esc(v.players[i].name)}</span><span class="note">${k + 1}位</span></div>`)
@@ -478,6 +482,7 @@ function bindGame(v: PlayerView, mode: { need: number } | null) {
   });
   on('[data-pick]', (el) => ctrl!.send({ type: 'pick', cardId: el.dataset.pick || null }));
   on('[data-trade]', (el) => ctrl!.send({ type: 'tradePick', index: Number(el.dataset.trade) }));
+  on('[data-decide]', (el) => ctrl!.send({ type: 'decide', use: el.dataset.decide === '1' }));
   on('[data-counter]', (el) => ctrl!.send({ type: 'counter', use: el.dataset.counter === '1' }));
   on('[data-guess]', (el) => ctrl!.send({ type: 'guess', suit: el.dataset.guess as Suit }));
   on('#again', () => {
@@ -539,20 +544,20 @@ function renderMenu() {
 }
 
 const RULES: [string, string][] = [
-  ['3 ドロースリー（任意）', '墓地からランダムで3枚 見て、好きな1枚を 手札に加えられる'],
-  ['4 トレードフォー（強制）', '次の人と 手札を伏せて、お互いに1枚 選んで 交換する'],
-  ['5 ゴ飛び（強制）', '次の人を とばす（出した枚数ぶん）'],
-  ['6 エクゾディア', '手札に 6 が4枚 そろったら そのゲームの勝者'],
-  ['7 ナナ渡し（強制）', 'いらないカードを 次の人に渡す（出した枚数ぶん）'],
-  ['8 ヤ切り（強制）', '出した瞬間に 場が流れる。もう一度 出せる'],
-  ['9 リビングデッドのエクナイン（任意）', '出したマークと同じ 6 を、墓地か 持っている人の手札から 回収できる'],
-  ['10 ジュ捨て（強制）', '手札の好きなカードを 墓地に捨てる（出した枚数ぶん）'],
-  ['J イレブンバック（強制）', '数字の強さが逆になり 3が一番強くなる（ゲームの最後まで。もう一度出すと戻る）'],
+  ['3 ドロー3（任意）', '使うか 先に選ぶ。使うと 墓地からランダムで3枚 見て、好きな1枚を 必ず 手札に加える'],
+  ['4 トレード4（強制）', '次の人と 手札を伏せて、お互いに1枚 選んで 交換する'],
+  ['5 5飛び（強制）', '次の人を とばす（出した枚数ぶん）'],
+  ['6 ケメゾディア', '手札に 6 が4枚 そろったら そのゲームの勝者'],
+  ['7 7渡し（強制）', 'いらないカードを 次の人に渡す（出した枚数ぶん）'],
+  ['8 8切り（強制）', '出した瞬間に 場が流れる。もう一度 出せる'],
+  ['9 リビングデッドのケメナイン（任意）', '出したマークと同じ 6 を、墓地か 持っている人の手札から 回収できる'],
+  ['10 10捨て（強制）', '手札の好きなカードを 墓地に捨てる（出した枚数ぶん）'],
+  ['J イレブンバック（強制）', '数字の強さが逆になり 3が一番強くなる（場が流れたら 元に戻る）'],
   ['Q クイーンリバース（強制）', '回る向きが 逆になる'],
   ['K キングチャレンジ（強制）', '墓地をシャッフルし、一番上のマークを当てたら 手札を2枚 捨てられる'],
-  ['A エースカウンター（任意）', 'ナナ渡しを受ける時、エースを捨てて 逆に相手へ1枚 渡せる'],
+  ['A エースカウンター（任意）', '7渡しを受ける時、エースを捨てて 逆に相手へ1枚 渡せる'],
   ['2', '効果なし'],
-  ['ジョーカー（1枚）', '一番強い。2枚以上で出す時は ほかの数字の代わりになれる（9 以外）。エクゾディア・エースカウンターには 使えない'],
+  ['ジョーカー（1枚）', '一番強い。2枚以上で出す時は ほかの数字の代わりになれる（9 以外）'],
   ['スペードの3', 'ジョーカー1枚より 強い'],
   ['上がり禁止', '8・ジョーカーでは 上がれない'],
   ['しばり', '前の人と 同じマークで出すと、場が流れるまで そのマークしか出せない（片しばりなし）'],

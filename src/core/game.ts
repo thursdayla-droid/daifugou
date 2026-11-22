@@ -6,11 +6,11 @@ export interface PlayerState {
   name: string;
   cpu: boolean;
   hand: Card[];
-  out: boolean; // 上がった・反則・エクゾディアで抜けた
+  out: boolean; // 上がった・反則・ケメゾディアで抜けた
 }
 
 export type Pending =
-  | { type: 'draw3'; player: number; options: Card[] }
+  | { type: 'draw3'; player: number; options: Card[] | null } // null＝やるか聞いている
   | { type: 'trade'; a: number; b: number; step: 'a' | 'b'; orderB: string[]; orderA: string[]; pickA: string | null }
   | { type: 'counter'; player: number; giver: number; count: number }
   | { type: 'counterGive'; player: number; to: number }
@@ -73,6 +73,7 @@ export type Action =
   | { type: 'play'; cards: string[] }
   | { type: 'pass' }
   | { type: 'pick'; cardId: string | null } // draw3 / nine
+  | { type: 'decide'; use: boolean } // draw3 をやるか
   | { type: 'tradePick'; index: number }
   | { type: 'counter'; use: boolean }
   | { type: 'cards'; cards: string[] } // give7 / counterGive / ten / kingDiscard
@@ -172,7 +173,7 @@ function hasAll(hand: Card[], ids: string[]): boolean {
   return new Set(ids).size === ids.length && ids.every((id) => hand.some((c) => c.id === id));
 }
 
-// ---------- エクゾディア（6が4枚） ----------
+// ---------- ケメゾディア（6が4枚） ----------
 function checkExodia(s: GameState): boolean {
   if (s.over) return true;
   for (let i = 0; i < s.players.length; i++) {
@@ -181,7 +182,7 @@ function checkExodia(s: GameState): boolean {
     const sixes = p.hand.filter((c) => c.rank === 6).length;
     if (sixes >= 4) {
       s.exodia = i;
-      log(s, { kind: 'exodia', player: i, title: 'エクゾディア！', text: `${nm(s, i)} の手札に 6 が4枚そろった！`, cards: ['S6', 'H6', 'D6', 'C6'] });
+      log(s, { kind: 'exodia', player: i, title: 'ケメゾディア！', text: `${nm(s, i)} の手札に 6 が4枚そろった！`, cards: ['S6', 'H6', 'D6', 'C6'] });
       const rest = s.players
         .map((_, k) => k)
         .filter((k) => k !== i && !s.players[k].out)
@@ -229,6 +230,11 @@ function clearField(s: GameState, why: string) {
   s.bind = null;
   s.passed = s.players.map(() => false);
   log(s, { kind: 'flow', text: why });
+  // イレブンバックは 場が流れたら終わり（2026-11-22 決定）
+  if (s.elevenBack) {
+    s.elevenBack = false;
+    log(s, { kind: 'effect', text: 'イレブンバック終了。数字の強さが 元に戻りました' });
+  }
 }
 
 /** 親番で 出せるカードが1つもない（8・ジョーカーしかない等）なら 反則負け */
@@ -352,34 +358,33 @@ function startEffects(s: GameState, who: number, play: EffectItem) {
   switch (play.rank) {
     case 3: {
       if (s.graveyard.length === 0 || me.out) return;
-      const options = shuffle(s, s.graveyard).slice(0, 3);
-      log(s, { kind: 'effect', player: who, title: 'ドロースリー', text: `${nm(s, who)} は 墓地から3枚 見ています` });
-      s.pending = { type: 'draw3', player: who, options };
+      log(s, { kind: 'effect', player: who, title: 'ドロー3', text: `${nm(s, who)} が ドロー3を 使うか 選んでいます` });
+      s.pending = { type: 'draw3', player: who, options: null };
       return;
     }
     case 4: {
       const b = nextActive(s, who);
       if (me.hand.length === 0 || b === who || s.players[b].hand.length === 0) return;
-      log(s, { kind: 'effect', player: who, title: 'トレードフォー', text: `${nm(s, who)} と ${nm(s, b)} が 1枚ずつ交換` });
+      log(s, { kind: 'effect', player: who, title: 'トレード4', text: `${nm(s, who)} と ${nm(s, b)} が 1枚ずつ交換` });
       s.pending = { type: 'trade', a: who, b, step: 'a', orderB: shuffle(s, s.players[b].hand.map((c) => c.id)), orderA: [], pickA: null };
       return;
     }
     case 5:
       after.skip = n;
-      log(s, { kind: 'effect', player: who, title: 'ゴ飛び', text: `次の ${n}人 を とばします` });
+      log(s, { kind: 'effect', player: who, title: '5飛び', text: `次の ${n}人 を とばします` });
       return;
     case 7: {
       const to = nextActive(s, who);
       const count = Math.min(n, me.hand.length);
       if (count === 0 || to === who) return;
-      log(s, { kind: 'effect', player: who, title: 'ナナ渡し', text: `${nm(s, who)} が ${nm(s, to)} に ${count}枚 渡します` });
+      log(s, { kind: 'effect', player: who, title: '7渡し', text: `${nm(s, who)} が ${nm(s, to)} に ${count}枚 渡します` });
       const hasAce = s.players[to].hand.some((c) => c.rank === 1);
       s.pending = hasAce ? { type: 'counter', player: to, giver: who, count } : { type: 'give7', player: who, to, count };
       return;
     }
     case 8:
       after.cut = true;
-      log(s, { kind: 'effect', player: who, title: 'ヤ切り', text: '場が流れます' });
+      log(s, { kind: 'effect', player: who, title: '8切り', text: '場が流れます' });
       return;
     case 9: {
       const suits = [...new Set(play.suits)];
@@ -393,14 +398,14 @@ function startEffects(s: GameState, who: number, play: EffectItem) {
         }
       }
       if (options.length === 0) return;
-      log(s, { kind: 'effect', player: who, title: 'リビングデッドのエクナイン', text: `${nm(s, who)} は 6 を回収できます` });
+      log(s, { kind: 'effect', player: who, title: 'リビングデッドのケメナイン', text: `${nm(s, who)} は 6 を回収できます` });
       s.pending = { type: 'nine', player: who, options };
       return;
     }
     case 10: {
       const count = Math.min(n, me.hand.length);
       if (count === 0) return;
-      log(s, { kind: 'effect', player: who, title: 'ジュ捨て', text: `${nm(s, who)} が ${count}枚 捨てます` });
+      log(s, { kind: 'effect', player: who, title: '10捨て', text: `${nm(s, who)} が ${count}枚 捨てます` });
       s.pending = { type: 'ten', player: who, count };
       return;
     }
@@ -429,7 +434,7 @@ function finishAfter(s: GameState) {
   checkFinishes(s, a.actor);
   if (s.over) return;
   if (a.cut) {
-    clearField(s, 'ヤ切りで 場が流れました');
+    clearField(s, '8切りで 場が流れました');
     s.turn = s.players[a.actor].out ? nextActive(s, a.actor) : a.actor;
     beginTurn(s);
     return;
@@ -454,14 +459,23 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
   const me = s.players[who];
   switch (pd.type) {
     case 'draw3': {
-      if (a.type !== 'pick') return '選んでください';
-      if (a.cardId) {
-        const k = s.graveyard.findIndex((c) => c.id === a.cardId);
-        if (k < 0 || !pd.options.some((c) => c.id === a.cardId)) return 'そのカードは選べません';
-        me.hand.push(...s.graveyard.splice(k, 1));
-        log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 墓地から1枚 手札に加えました` });
-        log(s, { kind: 'info', only: who, text: `手札に加えた：${cardLabel(cardOf(a.cardId))}`, cards: [a.cardId] });
-      } else log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 何も取りませんでした` });
+      // まず やるか やらないか。やるなら 必ず1枚 取る（2026-11-22 決定）
+      if (!pd.options) {
+        if (a.type !== 'decide') return 'やるか 選んでください';
+        if (!a.use) {
+          log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は ドロー3を 使いませんでした` });
+          break;
+        }
+        pd.options = shuffle(s, s.graveyard).slice(0, 3);
+        log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 墓地から${pd.options.length}枚 見ています` });
+        return null;
+      }
+      if (a.type !== 'pick' || !a.cardId) return '1枚 選んでください';
+      const k = s.graveyard.findIndex((c) => c.id === a.cardId);
+      if (k < 0 || !pd.options.some((c) => c.id === a.cardId)) return 'そのカードは選べません';
+      me.hand.push(...s.graveyard.splice(k, 1));
+      log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 墓地から1枚 手札に加えました` });
+      log(s, { kind: 'info', only: who, text: `手札に加えた：${cardLabel(cardOf(a.cardId))}`, cards: [a.cardId] });
       break;
     }
     case 'trade': {
@@ -587,7 +601,7 @@ export interface PlayerView {
 }
 
 export type ViewPending =
-  | { type: 'draw3'; player: number; options: Card[] | null }
+  | { type: 'draw3'; player: number; asking: boolean; options: Card[] | null }
   | { type: 'trade'; player: number; other: number; count: number }
   | { type: 'counter'; player: number; giver: number; count: number }
   | { type: 'counterGive'; player: number; to: number }
@@ -601,7 +615,7 @@ export function viewFor(s: GameState, me: number): PlayerView {
   let pending: ViewPending | null = null;
   const pd = s.pending;
   if (pd) {
-    if (pd.type === 'draw3') pending = { type: 'draw3', player: pd.player, options: pd.player === me ? pd.options : null };
+    if (pd.type === 'draw3') pending = { type: 'draw3', player: pd.player, asking: !pd.options, options: pd.player === me ? pd.options : null };
     else if (pd.type === 'trade') {
       const player = pd.step === 'a' ? pd.a : pd.b;
       const other = pd.step === 'a' ? pd.b : pd.a;
