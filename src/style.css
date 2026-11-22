@@ -9,7 +9,7 @@
   --black: #15120e;
   --red: #c2162e;
   --cw: 56px;
-  --ch: 80px;
+  --ch: 84px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; }
@@ -105,9 +105,9 @@ input:focus { border-color: var(--gold); }
 .badge.blue { background: linear-gradient(180deg, #6c8cff, #2a3fa6); color: #fff; border-color: #9fb5ff; }
 
 .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 0; }
-.field { --cw: 76px; --ch: 108px; display: flex; gap: 6px; justify-content: center; align-items: center; min-height: 112px; flex-wrap: wrap; padding: 0 10px; }
-.field.many { --cw: 58px; --ch: 83px; }
-.field-empty { width: 150px; height: 104px; border: 2px dashed rgba(212,175,55,.35); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
+.field { --cw: 76px; --ch: 114px; display: flex; gap: 6px; justify-content: center; align-items: center; min-height: 118px; flex-wrap: wrap; padding: 0 10px; }
+.field.many { --cw: 58px; --ch: 87px; }
+.field-empty { width: 150px; height: 114px; border: 2px dashed rgba(212,175,55,.35); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
 .fieldby { font-size: 13px; color: var(--muted); min-height: 1.2em; }
 .turnmsg { font-size: 17px; font-weight: 800; min-height: 1.4em; text-align: center; padding: 0 12px; }
 .turnmsg.mine { color: var(--gold-l); text-shadow: 0 0 10px rgba(246,220,132,.6); }
@@ -129,7 +129,7 @@ input:focus { border-color: var(--gold); }
 .sheet h2 { margin: 0; font-size: 22px; text-align: center; }
 .sheet p { margin: 0; text-align: center; font-size: 14px; color: var(--ink); line-height: 1.6; }
 .sheet .cards { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-.sheet .cards.big { --cw: 70px; --ch: 100px; }
+.sheet .cards.big { --cw: 70px; --ch: 105px; }
 .suitbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .suitbtns button { font-size: 30px; padding: 10px 0; background: linear-gradient(180deg, #fffdf6, #ecd9a6); color: var(--black); }
 .suitbtns button.r { color: var(--red); }
@@ -151,3 +151,9 @@ input:focus { border-color: var(--gold); }
 
 /* 依頼者のタイトルロゴ（2026-11-22）。黒い背景は 画面の暗さに なじませる */
 .title-logo { width: min(78%, 340px); height: auto; mix-blend-mode: lighten; margin: -8% 0 -6%; pointer-events: none; }
+
+/* 依頼者のカードの絵（2026-11-22）。絵に枠があるので こちらの枠は消す */
+.card.has-img, .card.back.has-art { border: 0; background: #000; box-shadow: 0 3px 6px rgba(0,0,0,.55); border-radius: calc(var(--cw) * .09); }
+.card.back.has-art::after { content: none; }
+.card.has-img img.art, .card.back img.art { object-fit: fill; }
+.card.has-img.sel { box-shadow: 0 0 0 2px var(--gold-l), 0 0 16px rgba(246,220,132,.8), 0 6px 10px rgba(0,0,0,.6); }

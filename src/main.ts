@@ -30,6 +30,7 @@ function cardHtml(c: Card, cls = '', attrs = ''): string {
   const a = art(c.id);
   const m = SUIT_MARK[c.suit!];
   const court = c.rank >= 11 || c.rank === 1;
+  if (a) return `<div class="card has-img ${cls}" ${attrs}><img class="art" src="${a}" alt="${rankLabel(c.rank)}"></div>`;
   const inner = a
     ? `<img class="art" src="${a}">`
     : `<div class="c1">${rankLabel(c.rank)}<i>${m}</i></div><div class="mid">${court ? (c.rank === 1 ? m : rankLabel(c.rank)) : m}</div>`;
