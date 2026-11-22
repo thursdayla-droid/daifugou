@@ -262,6 +262,22 @@ describe('効果', () => {
       expect(s.events.some((e) => e.title === 'マークしばり')).toBe(false);
     }
   });
+  it('♥Q→♠K→♠A なら 途中から マークしばり ♠', () => {
+    const s = setup([['S12', 'H12', 'D4', 'D5'], ['S13', 'H3', 'C4'], ['S1', 'H8', 'C5'], ['D3', 'D7']]);
+    s.direction = 1;
+    apply(s, 0, { type: 'play', cards: ['H12'] }); // Q で 向きが逆に → 次は 3番の人
+    const t1 = s.turn;
+    s.players[t1].hand = ['S13', 'H3', 'C4'].map(c);
+    apply(s, t1, { type: 'play', cards: ['S13'] });
+    if (s.pending) apply(s, t1, { type: 'guess', suit: 'S' });
+    if (s.pending?.type === 'kingDiscard') apply(s, t1, { type: 'cards', cards: s.players[t1].hand.slice(0, s.pending.count).map((x) => x.id) });
+    expect(s.seqBind).toBe(true);
+    expect(s.bind).toBeNull();
+    const t2 = s.turn;
+    s.players[t2].hand = ['S1', 'H8', 'C5'].map(c);
+    expect(apply(s, t2, { type: 'play', cards: ['S1'] })).toBeNull();
+    expect(s.bind).toEqual(['S']);
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });
