@@ -146,6 +146,7 @@ function onMsg(m: HostMsg) {
 }
 
 function resetAll() {
+  document.body.classList.remove('deciding');
   wantBgm(false);
   ctrl = null;
   view = null;
@@ -510,6 +511,9 @@ function renderGame(v: PlayerView) {
     </div>
     ${sheetHtml(v)}
   </div>`;
+  // 自分が選ぶ画面を出している間は 演出を隠す（選ぶ画面に かぶらないように）
+  const p0 = v.pending;
+  document.body.classList.toggle('deciding', !v.over && !!p0 && p0.player === v.me);
   bindGame(v, mode);
   if (showRules) renderRulesOver(document.querySelector('.game')!);
   if (showMenu) renderMenu();

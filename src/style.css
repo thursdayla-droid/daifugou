@@ -199,3 +199,15 @@ input:focus { border-color: var(--gold); }
 @keyframes exZoom { from { transform: scale(.2) translateY(40px); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes exPop { 0% { transform: scale(2.2); opacity: 0; } 60% { transform: scale(.92); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes exShake { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-6px,3px); } 50% { transform: translate(5px,-4px); } 75% { transform: translate(-3px,-2px); } }
+
+/* 2026-11-22 依頼者「キングチャレンジが見れない。左にはみ出てる」
+   - 大きな文字が 長い時（リビングデッドのケメナイン 等）に 画面の外へ はみ出していたので 折り返す
+   - 自分が 選ぶ画面を 出している間は、ほかの演出を 上に重ねない */
+.banner { padding: 0 16px; }
+.banner div { white-space: normal; text-align: center; max-width: 100%; font-size: clamp(24px, 8vw, 38px); line-height: 1.2; }
+.fx-move-cap { max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
+.fx-reveal .fx-cap { max-width: calc(100vw - 32px); text-align: center; }
+body.deciding #fx { visibility: hidden; }
+.sheet-wrap { align-items: safe center; justify-content: safe center; }
+.sheet { min-width: 0; }
+.suitbtns button { min-width: 0; }
