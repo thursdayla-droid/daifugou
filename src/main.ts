@@ -58,6 +58,8 @@ type Fx =
   | { t: 'nine'; name: string };
 let fxQ: Fx[] = [];
 let fxBusy = false;
+/** ケメゾディアの登場が 終わるまで 結果を出さない（2026-11-22 依頼者） */
+let holdResult = false;
 /** もらったばかりの カード（手札で 光らせる） */
 const newCards = new Map<string, number>();
 let toast = '';
@@ -99,6 +101,7 @@ function onMsg(m: HostMsg) {
     };
     for (const e of v.events) {
       if (e.seq <= lastSeq) continue;
+      if (e.kind === 'exodia') holdResult = true;
       if (e.title === 'リビングデッドのケメナイン' && e.player !== undefined) fxQ.push({ t: 'nine', name: e.player === v.me ? 'あなた' : v.players[e.player].name });
       else if (e.kind === 'exodia' && e.player !== undefined) fxQ.push({ t: 'exodia', name: e.player === v.me ? 'あなた' : v.players[e.player].name });
       else if (e.reveal) fxQ.push({ t: 'reveal', card: e.reveal.card, caption: e.reveal.caption });
@@ -157,6 +160,7 @@ function resetAll() {
   selected.clear();
   lastSeq = 0;
   fxQ = [];
+  holdResult = false;
   newCards.clear();
   showMenu = false;
 }
@@ -208,9 +212,19 @@ function runFx() {
     el.className = 'fx-exodia';
     el.innerHTML = `<div class="ex-flash"></div><img src="${kemezodiaImg}" alt=""><div class="ex-title"><span class="gold-text">ケメゾディア！</span></div><div class="ex-sub">${esc(f.name)} の手札に 6が4枚！</div>`;
     layer.appendChild(el);
-    el.addEventListener('click', () => el.remove());
-    setTimeout(() => el.remove(), 3600);
-    fxBusy = false;
+    let closed = false;
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      el.remove();
+      holdResult = false;
+      fxBusy = false;
+      if (view) renderGame(view);
+      runFx();
+    };
+    // 出てすぐは 閉じない（うっかり タップで 見のがさないように）
+    setTimeout(() => el.addEventListener('click', close), 1200);
+    setTimeout(close, 3600);
     return;
   }
   if (f.t === 'nine') {
@@ -553,7 +567,7 @@ function renderGame(v: PlayerView) {
 }
 
 function sheetHtml(v: PlayerView): string {
-  if (v.over) return resultHtml(v);
+  if (v.over) return holdResult ? '' : resultHtml(v);
   const p = v.pending;
   if (!p || p.player !== v.me) return '';
   switch (p.type) {
