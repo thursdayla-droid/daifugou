@@ -244,6 +244,13 @@ describe('効果', () => {
     expect(s.players[1].hand.length).toBe(3);
     expect(s.players[0].hand.filter((x) => x.suit === 'H').length).toBe(2);
   });
+  it('キングチャレンジで ジョーカーなら 当たり', () => {
+    const s = setup([['S13', 'S4', 'S5'], ['H7', 'H6'], ['D7', 'D6']]);
+    s.graveyard = [c('JK1')];
+    apply(s, 0, { type: 'play', cards: ['S13'] });
+    apply(s, 0, { type: 'guess', suit: 'H' });
+    expect(s.pending).toMatchObject({ type: 'kingDiscard', count: 2 });
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });

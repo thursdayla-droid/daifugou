@@ -607,7 +607,8 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
       if (a.type !== 'guess' || !SUITS.includes(a.suit)) return 'マークを選んでください';
       s.graveyard = shuffle(s, s.graveyard);
       const top = s.graveyard[s.graveyard.length - 1];
-      const hit = top.suit === a.suit;
+      // ジョーカーが一番上なら 当たり扱い（2026-11-22 依頼者）
+      const hit = top.suit === a.suit || top.rank === 0;
       log(s, {
         kind: 'effect',
         player: who,
