@@ -15,7 +15,7 @@ export type Pending =
   | { type: 'counter'; player: number; giver: number; count: number }
   | { type: 'counterGive'; player: number; to: number }
   | { type: 'give7'; player: number; to: number; count: number }
-  | { type: 'nine'; player: number; options: { cardId: string; from: 'grave' | number }[] }
+  | { type: 'nine'; player: number; options: { cardId: string; from: 'grave' | number }[]; picked: number }
   | { type: 'ten'; player: number; count: number }
   | { type: 'king'; player: number }
   | { type: 'kingDiscard'; player: number; count: number };
@@ -340,6 +340,8 @@ function effectQueue(play: Play): EffectItem[] {
       .sort((a, b) => rankValue(a.rank) - rankValue(b.rank))
       .map((c) => ({ rank: c.rank, count: 1, suits: [c.suit!] }));
   }
+  // キングチャレンジは 出した枚数ぶん チャレンジ（2026-11-22 決定）
+  if (play.rank === 13) return play.cards.map(() => ({ rank: 13, count: 1, suits: [] }));
   return [{ rank: play.rank, count: play.count, suits: play.suits }];
 }
 
@@ -399,7 +401,7 @@ function startEffects(s: GameState, who: number, play: EffectItem) {
       }
       if (options.length === 0) return;
       log(s, { kind: 'effect', player: who, title: 'リビングデッドのケメナイン', text: `${nm(s, who)} は 6 を回収できます` });
-      s.pending = { type: 'nine', player: who, options };
+      s.pending = { type: 'nine', player: who, options, picked: 0 };
       return;
     }
     case 10: {
@@ -414,8 +416,9 @@ function startEffects(s: GameState, who: number, play: EffectItem) {
       log(s, { kind: 'effect', player: who, title: 'イレブンバック', text: s.elevenBack ? '数字の強さが逆に！（3が一番強い）' : '数字の強さが 元に戻りました' });
       return;
     case 12:
-      s.direction = s.direction === 1 ? -1 : 1;
-      log(s, { kind: 'effect', player: who, title: 'クイーンリバース', text: '回る向きが 逆になりました' });
+      // 2枚なら リバースのリバースで そのまま（2026-11-22 決定）
+      if (n % 2 === 1) s.direction = s.direction === 1 ? -1 : 1;
+      log(s, { kind: 'effect', player: who, title: 'クイーンリバース', text: n % 2 === 1 ? '回る向きが 逆になりました' : 'リバースのリバースで 向きは そのまま' });
       return;
     case 13: {
       if (s.graveyard.length === 0 || me.hand.length === 0) return;
@@ -547,7 +550,12 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
           const fromTxt = opt.from === 'grave' ? '墓地' : `${nm(s, opt.from)} の手札`;
           log(s, { kind: 'effect', player: who, text: `${nm(s, who)} が ${fromTxt} から ${cardLabel(cardOf(a.cardId))} を 回収！`, cards: [a.cardId] });
         }
-      } else log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 回収しませんでした` });
+        // 9を2枚以上なら 残りのマークの6も 続けて回収できる（1枚だけでもよい）
+        pd.options = pd.options.filter((o) => o.cardId !== a.cardId);
+        pd.picked++;
+        if (checkExodia(s)) return null;
+        if (pd.options.length > 0) return null;
+      } else if (pd.picked === 0) log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 回収しませんでした` });
       break;
     }
     case 'king': {
@@ -606,7 +614,7 @@ export type ViewPending =
   | { type: 'counter'; player: number; giver: number; count: number }
   | { type: 'counterGive'; player: number; to: number }
   | { type: 'give7'; player: number; to: number; count: number }
-  | { type: 'nine'; player: number; options: { cardId: string; from: 'grave' | number }[] }
+  | { type: 'nine'; player: number; options: { cardId: string; from: 'grave' | number }[]; picked: number }
   | { type: 'ten'; player: number; count: number }
   | { type: 'king'; player: number }
   | { type: 'kingDiscard'; player: number; count: number };

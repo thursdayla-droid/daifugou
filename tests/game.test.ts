@@ -116,6 +116,37 @@ describe('効果', () => {
     apply(s, 0, { type: 'pick', cardId: 'C9' });
     expect(s.players[0].hand.map((x) => x.id)).toContain('C9');
   });
+  it('Q2枚はそのまま', () => {
+    const s = setup([['S12', 'H12', 'S4'], ['H5', 'H6'], ['D5', 'D6'], ['C5', 'C6']]);
+    apply(s, 0, { type: 'play', cards: ['S12', 'H12'] });
+    expect(s.direction).toBe(1);
+    expect(s.turn).toBe(1);
+  });
+  it('5を2枚なら 4番目の人', () => {
+    const s = setup([['S5', 'H5', 'S4'], ['H7', 'H6'], ['D7', 'D6'], ['C7', 'C6'], ['S9', 'S10']]);
+    apply(s, 0, { type: 'play', cards: ['S5', 'H5'] });
+    expect(s.turn).toBe(3);
+  });
+  it('9を2枚なら 2つのマークの6・1枚だけでもよい', () => {
+    const s = setup([['S9', 'H9', 'S4'], ['S6', 'D5'], ['C5', 'C7']]);
+    s.graveyard = [c('H6')];
+    apply(s, 0, { type: 'play', cards: ['S9', 'H9'] });
+    apply(s, 0, { type: 'pick', cardId: 'S6' });
+    expect(s.pending?.type).toBe('nine');
+    apply(s, 0, { type: 'pick', cardId: null });
+    expect(s.pending).toBeNull();
+    expect(s.players[0].hand.map((x) => x.id)).toContain('S6');
+    expect(s.graveyard.map((x) => x.id)).toContain('H6');
+  });
+  it('K2枚なら 2回チャレンジ', () => {
+    const s = setup([['S13', 'H13', 'S4', 'S5'], ['H7', 'H6'], ['D7', 'D6']]);
+    s.graveyard = [c('C9')];
+    apply(s, 0, { type: 'play', cards: ['S13', 'H13'] });
+    apply(s, 0, { type: 'guess', suit: 'S' });
+    expect(s.pending?.type).toBe('king');
+    apply(s, 0, { type: 'guess', suit: 'C' });
+    expect(s.pending?.type).toBe('kingDiscard');
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });
