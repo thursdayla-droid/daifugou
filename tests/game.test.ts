@@ -17,9 +17,11 @@ describe('出し方', () => {
     expect(P('S5', 'H5').kind).toBe('set');
     expect(P('S5', 'JK1').kind).toBe('set');
     expect(analyzePlay([c('S9'), c('JK1')])).toBeNull(); // 9にはなれない
-    expect(P('S3', 'S4', 'S5').kind).toBe('stair');
+    expect(analyzePlay([c('S3'), c('S4'), c('S5')])).toBeNull(); // 階段は 4枚だけ
+    expect(P('S3', 'S4', 'S5', 'S6').kind).toBe('stair');
+    expect(analyzePlay(['S3', 'S4', 'S5', 'S6', 'S7'].map(c))).toBeNull();
     expect(analyzePlay([c('S3'), c('H4'), c('S5')])).toBeNull();
-    expect(P('S13', 'S1', 'S2').kind).toBe('stair');
+    expect(P('S12', 'S13', 'S1', 'S2').kind).toBe('stair');
   });
   it('強さ', () => {
     expect(canBeat(ctx(['S4']), P('H5'))).toBe(true);
@@ -36,12 +38,12 @@ describe('出し方', () => {
     expect(isForbiddenFinish(P('S8'), 1)).toBe(true);
     expect(isForbiddenFinish(P('JK1'), 1)).toBe(true);
     expect(isForbiddenFinish(P('S8'), 2)).toBe(false);
-    expect(isForbiddenFinish(P('S7', 'S8', 'S9'), 3)).toBe(true);
-    expect(isForbiddenFinish(P('S5', 'S6', 'S7'), 3)).toBe(false);
+    expect(isForbiddenFinish(P('S6', 'S7', 'S8', 'S9'), 4)).toBe(false);
   });
   it('列挙', () => {
     const ps = enumeratePlays(['S3', 'S4', 'S5', 'H5', 'JK1'].map(c));
-    expect(ps.some((p) => p.kind === 'stair' && p.count === 3)).toBe(true);
+    expect(ps.some((p) => p.kind === 'stair')).toBe(false);
+    expect(enumeratePlays(['S3', 'S4', 'S5', 'S6', 'S7'].map(c)).filter((p) => p.kind === 'stair').length).toBe(2);
     expect(ps.some((p) => p.kind === 'set' && p.rank === 5 && p.count === 3)).toBe(true);
   });
 });
@@ -96,14 +98,13 @@ describe('効果', () => {
     expect(s.field).toBeNull();
     expect(s.elevenBack).toBe(false);
   });
-  it('階段も効果あり（7→8の順）', () => {
-    const s = setup([['S7', 'S8', 'S9', 'H4', 'H3'], ['H5', 'H6'], ['D5', 'D6']]);
-    apply(s, 0, { type: 'play', cards: ['S7', 'S8', 'S9'] });
-    expect(s.pending?.type).toBe('give7');
-    apply(s, 0, { type: 'cards', cards: ['H4'] });
-    expect(s.players[1].hand.map((x) => x.id)).toContain('H4');
-    expect(s.field).toBeNull(); // 8で流れた
-    expect(s.turn).toBe(0);
+  it('階段（4枚）は 革命だけで 効果なし', () => {
+    const s = setup([['S7', 'S8', 'S9', 'S10', 'H4', 'H3'], ['H5', 'H6'], ['D5', 'D6']]);
+    apply(s, 0, { type: 'play', cards: ['S7', 'S8', 'S9', 'S10'] });
+    expect(s.revolution).toBe(true);
+    expect(s.pending).toBeNull();
+    expect(s.field).not.toBeNull(); // 8切りは 起きない
+    expect(s.turn).toBe(1);
   });
   it('ドロー3：先に使うか選ぶ・使ったら必ず取る', () => {
     const s = setup([['S3', 'S4'], ['H5', 'H6'], ['D5', 'D6']]);

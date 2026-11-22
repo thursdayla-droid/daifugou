@@ -50,7 +50,8 @@ export function analyzePlay(cards: Card[]): Play | null {
     return { ...base, kind: 'set', rank: r, value: rankValue(r) };
   }
   // 階段：同じマーク3枚以上の続き数字。【仮】ジョーカーは 階段に 使えない
-  if (n >= 3 && jokers === 0 && new Set(suits).size === 1) {
+  // 階段は 革命の 4枚だけ（2026-11-22 依頼者）
+  if (n === 4 && jokers === 0 && new Set(suits).size === 1) {
     const vals = naturals.map((c) => rankValue(c.rank)).sort((a, b) => a - b);
     for (let i = 1; i < vals.length; i++) if (vals[i] !== vals[i - 1] + 1) return null;
     const low = naturals.find((c) => rankValue(c.rank) === vals[0])!;
@@ -93,7 +94,7 @@ export function makesSeqBind(ctx: { revolution: boolean; elevenBack: boolean }, 
 export function isForbiddenFinish(play: Play, handSize: number): boolean {
   if (play.count !== handSize) return false;
   if (play.hasJoker) return true;
-  if (play.cards.some((c) => c.rank === 8)) return true; // 階段の中の8も ヤ切り
+  if (play.kind !== 'stair' && play.rank === 8) return true; // 階段は 効果なしなので 中の8で 上がってもよい【仮】
   return false;
 }
 
@@ -158,7 +159,7 @@ export function enumeratePlays(hand: Card[]): Play[] {
       const run: Card[] = [];
       for (let v = start; v <= 15 && byVal.has(v); v++) {
         run.push(byVal.get(v)!);
-        if (run.length >= 3) out.push(analyzePlay([...run])!);
+        if (run.length === 4) out.push(analyzePlay([...run])!);
       }
     }
   }

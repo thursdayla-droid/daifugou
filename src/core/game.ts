@@ -1,5 +1,5 @@
 // 大富豪のゲーム進行（親＝部屋を作った人の端末で動かす）
-import { Card, Suit, SUITS, SUIT_MARK, cardLabel, makeDeck, mulberry32Step, rankLabel, rankValue } from './cards';
+import { Card, Suit, SUITS, SUIT_MARK, cardLabel, makeDeck, mulberry32Step, rankLabel } from './cards';
 import { Play, analyzePlay, canBeat, causesRevolution, isForbiddenFinish, legalPlays, makesBind, makesSeqBind } from './plays';
 
 export interface PlayerState {
@@ -358,11 +358,8 @@ function doPlay(s: GameState, who: number, ids: string[]): string | null {
 /** 効果の順番。ジョーカーだけの時は なし【仮】。階段は 弱い順に 1枚ずつ（2026-11-22 決定：階段も効果あり） */
 function effectQueue(play: Play): EffectItem[] {
   if (play.jokerOnly) return [];
-  if (play.kind === 'stair') {
-    return [...play.cards]
-      .sort((a, b) => rankValue(a.rank) - rankValue(b.rank))
-      .map((c) => ({ rank: c.rank, count: 1, suits: [c.suit!] }));
-  }
+  // 階段（革命の4枚）は 効果なし（2026-11-22 依頼者）
+  if (play.kind === 'stair') return [];
   // キングチャレンジは 出した枚数ぶん チャレンジ（2026-11-22 決定）
   if (play.rank === 13) return play.cards.map(() => ({ rank: 13, count: 1, suits: [] }));
   return [{ rank: play.rank, count: play.count, suits: play.suits }];
