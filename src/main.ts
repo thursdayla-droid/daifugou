@@ -214,8 +214,8 @@ function runFx() {
     el.className = 'banner';
     el.innerHTML = `<div><span class="gold-text">${esc(f.text)}</span></div>`;
     layer.appendChild(el);
-    setTimeout(() => el.remove(), 1050 * fast);
-    return done(1050);
+    setTimeout(() => el.remove(), 800 * fast);
+    return done(800);
   }
   if (f.t === 'exodia') {
     // ケメゾディア：依頼者の絵（2026-11-22）
@@ -243,7 +243,7 @@ function runFx() {
     showActivate(layer, f.title, ch, () => {
       fxBusy = false;
       runFx();
-    }, Math.round(1500 * fast));
+    }, Math.round(850 * fast)); // 2026-11-22 依頼者「テンポ悪い。軽めで」
     return;
   }
   if (f.t === 'nine') {
@@ -286,7 +286,7 @@ function runFx() {
   layer.appendChild(cap);
   // 2026-11-22 依頼者「もらうカード もう少し ゆっくり」：真ん中で 大きく止めてから 届ける
   const faceUp = !!mv.cards?.length;
-  const dur = (faceUp ? 2300 : 1500) * fast;
+  const dur = (faceUp ? 1600 : 1000) * fast;
   const n = Math.min(mv.count, 4);
   const midX = window.innerWidth / 2 - 28;
   const midY = window.innerHeight * 0.45 - 42;

@@ -150,7 +150,7 @@ export class Room {
     if (w === null || !g.players[w].cpu) return;
     // 【仮】人が見て分かる速さ。大きな文字が出た直後は もう少し待つ
     const recent = g.events.slice(-4).some((e) => e.title && e.seq > this.lastCpuSeq);
-    const delay = (g.pending ? 1600 : 2000 + Math.random() * 1000) + (recent ? 1200 : 0);
+    const delay = (g.pending ? 1400 : 1800 + Math.random() * 800) + (recent ? 600 : 0);
     this.cpuTimer = setTimeout(() => {
       this.cpuTimer = null;
       const gg = this.game;
