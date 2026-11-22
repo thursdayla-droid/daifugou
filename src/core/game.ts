@@ -29,6 +29,22 @@ export interface GameEvent {
   cards?: string[];
   /** この人にだけ見せる */
   only?: number;
+  /** カードの移動（画面で 動きを見せる） */
+  move?: CardMove;
+  /** 1枚を 大きく見せる（キングチャレンジの めくり） */
+  reveal?: { card: string; caption: string };
+}
+
+/** 'grave'＝墓地、数字＝その人の手札 */
+export type Place = 'grave' | number;
+export interface CardMove {
+  from: Place;
+  to: Place;
+  count: number;
+  label: string;
+  /** 見える人だけに 中身を見せる（なしなら 全員に見せる） */
+  cards?: string[];
+  vis?: number[];
 }
 
 export interface AfterPlay {
@@ -479,6 +495,7 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
       me.hand.push(...s.graveyard.splice(k, 1));
       log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 墓地から1枚 手札に加えました` });
       log(s, { kind: 'info', only: who, text: `手札に加えた：${cardLabel(cardOf(a.cardId))}`, cards: [a.cardId] });
+      log(s, { kind: 'move', text: '', move: { from: 'grave', to: who, count: 1, label: 'ドロー3', cards: [a.cardId], vis: [who] } });
       break;
     }
     case 'trade': {
@@ -500,6 +517,8 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
       log(s, { kind: 'effect', text: `${nm(s, pd.a)} と ${nm(s, pd.b)} が 1枚ずつ 交換しました` });
       log(s, { kind: 'info', only: pd.a, text: `もらったカード：${cardLabel(fromB[0])}（渡したカード：${cardLabel(fromA[0])}）`, cards: [fromB[0].id] });
       log(s, { kind: 'info', only: pd.b, text: `もらったカード：${cardLabel(fromA[0])}（渡したカード：${cardLabel(fromB[0])}）`, cards: [fromA[0].id] });
+      log(s, { kind: 'move', text: '', move: { from: pd.b, to: pd.a, count: 1, label: 'トレード4', cards: [fromB[0].id], vis: [pd.a, pd.b] } });
+      log(s, { kind: 'move', text: '', move: { from: pd.a, to: pd.b, count: 1, label: 'トレード4', cards: [fromA[0].id], vis: [pd.a, pd.b] } });
       break;
     }
     case 'counter': {
@@ -510,6 +529,7 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
         removeCards(me.hand, [ace.id]);
         s.graveyard.push(ace);
         log(s, { kind: 'effect', player: who, title: 'エースカウンター', text: `${nm(s, who)} が エースカウンター！ ${cardLabel(ace)} を捨てて 逆に1枚 渡します`, cards: [ace.id] });
+        log(s, { kind: 'move', text: '', move: { from: who, to: 'grave', count: 1, label: 'エースカウンター', cards: [ace.id] } });
         if (me.hand.length > 0) {
           s.pending = { type: 'counterGive', player: who, to: pd.giver };
           return null;
@@ -532,9 +552,11 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
         s.players[pd.to].hand.push(...taken);
         log(s, { kind: 'effect', player: who, text: `${nm(s, who)} が ${nm(s, pd.to)} に ${taken.length}枚 渡しました` });
         log(s, { kind: 'info', only: pd.to, text: `${nm(s, who)} から もらった：${taken.map(cardLabel).join(' ')}`, cards: taken.map((c) => c.id) });
+        log(s, { kind: 'move', text: '', move: { from: who, to: pd.to, count: taken.length, label: pd.type === 'give7' ? '7渡し' : 'エースカウンター', cards: taken.map((c) => c.id), vis: [who, pd.to] } });
       } else {
         s.graveyard.push(...taken);
         log(s, { kind: 'effect', player: who, text: `${nm(s, who)} が ${taken.map(cardLabel).join(' ')} を 捨てました`, cards: taken.map((c) => c.id) });
+        log(s, { kind: 'move', text: '', move: { from: who, to: 'grave', count: taken.length, label: pd.type === 'ten' ? '10捨て' : 'キングチャレンジ', cards: taken.map((c) => c.id) } });
       }
       break;
     }
@@ -549,6 +571,7 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
           me.hand.push(...src.splice(k, 1));
           const fromTxt = opt.from === 'grave' ? '墓地' : `${nm(s, opt.from)} の手札`;
           log(s, { kind: 'effect', player: who, text: `${nm(s, who)} が ${fromTxt} から ${cardLabel(cardOf(a.cardId))} を 回収！`, cards: [a.cardId] });
+          log(s, { kind: 'move', text: '', move: { from: opt.from, to: who, count: 1, label: 'ケメナイン', cards: [a.cardId] } });
         }
         // 9を2枚以上なら 残りのマークの6も 続けて回収できる（1枚だけでもよい）
         pd.options = pd.options.filter((o) => o.cardId !== a.cardId);
@@ -569,6 +592,7 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
         title: hit ? '当たり！' : 'はずれ…',
         text: `${nm(s, who)} の予想 ${SUIT_MARK[a.suit]} → 一番上は ${cardLabel(top)}。${hit ? '当たり！ 2枚捨てられます' : 'はずれ'}`,
         cards: [top.id],
+        reveal: { card: top.id, caption: `${nm(s, who)} の予想 ${SUIT_MARK[a.suit]}　→　${hit ? '当たり！' : 'はずれ…'}` },
       });
       if (hit && me.hand.length > 0) {
         s.pending = { type: 'kingDiscard', player: who, count: Math.min(2, me.hand.length) };
@@ -649,7 +673,8 @@ export function viewFor(s: GameState, me: number): PlayerView {
     exodia: s.exodia,
     events: s.events
       .filter((e) => e.only === undefined || e.only === me)
-      .slice(-30),
+      .slice(-30)
+      .map((e) => (e.move?.vis && !e.move.vis.includes(me) ? { ...e, move: { ...e.move, cards: undefined } } : e)),
   };
 }
 

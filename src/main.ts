@@ -1,7 +1,7 @@
 import './style.css';
 import titleLogo from './assets/title.webp';
 import { Card, SUIT_MARK, SUITS, Suit, cardFromId, rankLabel, sortHand } from './core/cards';
-import { PlayerView, rankTitle } from './core/game';
+import { CardMove, Place, PlayerView, rankTitle } from './core/game';
 import { analyzePlay, canBeat, isForbiddenFinish, isInverted, legalPlays } from './core/plays';
 import { Controller, hostRoom, joinRoom, localRoom } from './net/peer';
 import { HostMsg, MAX_PLAYERS } from './net/room';
@@ -47,8 +47,14 @@ let view: PlayerView | null = null;
 let lobby: Extract<HostMsg, { t: 'lobby' }> | null = null;
 let selected = new Set<string>();
 let lastSeq = 0;
-let bannerQ: string[] = [];
-let bannerBusy = false;
+type Fx =
+  | { t: 'banner'; text: string }
+  | { t: 'move'; move: CardMove }
+  | { t: 'reveal'; card: string; caption: string };
+let fxQ: Fx[] = [];
+let fxBusy = false;
+/** もらったばかりの カード（手札で 光らせる） */
+const newCards = new Map<string, number>();
 let toast = '';
 let showRules = false;
 let showMenu = false;
@@ -88,7 +94,13 @@ function onMsg(m: HostMsg) {
     };
     for (const e of v.events) {
       if (e.seq <= lastSeq) continue;
-      if (e.title) bannerQ.push(e.title);
+      if (e.reveal) fxQ.push({ t: 'reveal', card: e.reveal.card, caption: e.reveal.caption });
+      else if (e.title) fxQ.push({ t: 'banner', text: e.title });
+      if (e.move) {
+        fxQ.push({ t: 'move', move: e.move });
+        if (e.move.to === v.me && e.move.cards) for (const id of e.move.cards) newCards.set(id, Date.now() + 6000);
+        want('play', e.move.count);
+      }
       if (e.kind === 'play') want('play', e.cards?.length ?? 1);
       else if (e.kind === 'pass') want('pass');
       else if (e.kind === 'flow') want('flow');
@@ -114,7 +126,7 @@ function onMsg(m: HostMsg) {
     view = v;
     wantBgm(true);
     render();
-    runBanner();
+    runFx();
   } else if (m.t === 'err') {
     toast = m.msg;
     render();
@@ -136,23 +148,95 @@ function resetAll() {
   lobby = null;
   selected.clear();
   lastSeq = 0;
-  bannerQ = [];
+  fxQ = [];
+  newCards.clear();
   showMenu = false;
 }
 
-function runBanner() {
-  if (bannerBusy || bannerQ.length === 0) return;
-  bannerBusy = true;
-  const t = bannerQ.shift()!;
-  const el = document.createElement('div');
-  el.className = 'banner';
-  el.innerHTML = `<div><span class="gold-text">${esc(t)}</span></div>`;
-  (document.querySelector('.game') ?? app).appendChild(el);
-  setTimeout(() => {
-    el.remove();
-    bannerBusy = false;
-    runBanner();
-  }, 1050);
+// ---------- 演出（大きな文字・カードの移動・めくり）を 順番に ----------
+function fxLayer(): HTMLElement {
+  let el = document.getElementById('fx');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'fx';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function placeName(v: PlayerView, p: Place): string {
+  if (p === 'grave') return '墓地';
+  return p === v.me ? 'あなた' : v.players[p].name;
+}
+
+function placeRect(v: PlayerView, p: Place): DOMRect | null {
+  const sel = p === 'grave' ? '#grave' : p === v.me ? '.hand' : `.opp[data-p="${p}"]`;
+  return document.querySelector(sel)?.getBoundingClientRect() ?? null;
+}
+
+function runFx() {
+  if (fxBusy || fxQ.length === 0) return;
+  fxBusy = true;
+  // たまりすぎたら 速く
+  const fast = fxQ.length > 5 ? 0.5 : 1;
+  const f = fxQ.shift()!;
+  const done = (ms: number) =>
+    setTimeout(() => {
+      fxBusy = false;
+      runFx();
+    }, ms * fast);
+  const layer = fxLayer();
+  if (f.t === 'banner') {
+    const el = document.createElement('div');
+    el.className = 'banner';
+    el.innerHTML = `<div><span class="gold-text">${esc(f.text)}</span></div>`;
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 1050 * fast);
+    return done(1050);
+  }
+  if (f.t === 'reveal') {
+    const el = document.createElement('div');
+    el.className = 'fx-reveal';
+    el.innerHTML = `<div class="fx-cap">${esc(f.caption)}</div>${cardHtml(cardFromId(f.card))}`;
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 2000 * fast);
+    return done(2000);
+  }
+  const v = view;
+  const mv = f.move;
+  const a = v && placeRect(v, mv.from);
+  const b = v && placeRect(v, mv.to);
+  if (!v || !a || !b) return done(0);
+  const cap = document.createElement('div');
+  cap.className = 'fx-move-cap';
+  cap.innerHTML = `<b>${esc(mv.label)}</b><span>${esc(placeName(v, mv.from))} <i>→</i> ${esc(placeName(v, mv.to))}</span><small>${mv.count}枚</small>`;
+  layer.appendChild(cap);
+  const dur = 800 * fast;
+  const n = Math.min(mv.count, 4);
+  for (let k = 0; k < n; k++) {
+    const wrap = document.createElement('div');
+    wrap.className = 'fx-card';
+    const id = mv.cards?.[k];
+    wrap.innerHTML = id ? cardHtml(cardFromId(id)) : backHtml();
+    layer.appendChild(wrap);
+    const off = (k - (n - 1) / 2) * 18;
+    const ax = a.left + a.width / 2 - 28 + off;
+    const ay = a.top + a.height / 2 - 42;
+    const bx = b.left + b.width / 2 - 28 + off;
+    const by = b.top + b.height / 2 - 42;
+    wrap.animate(
+      [
+        { transform: `translate(${ax}px, ${ay}px) scale(.6)`, opacity: 0 },
+        { transform: `translate(${(ax + bx) / 2}px, ${Math.min(ay, by) - 40}px) scale(1.25)`, opacity: 1, offset: 0.45 },
+        { transform: `translate(${bx}px, ${by}px) scale(.8)`, opacity: 1, offset: 0.9 },
+        { transform: `translate(${bx}px, ${by}px) scale(.6)`, opacity: 0 },
+      ],
+      { duration: dur, delay: k * 90 * fast, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'both' },
+    );
+    setTimeout(() => wrap.remove(), dur + k * 90 * fast + 50);
+  }
+  setTimeout(() => cap.remove(), (dur + 500) * fast);
+  return done(dur / fast + 500);
 }
 
 // ---------- タイトル ----------
@@ -359,7 +443,8 @@ function renderGame(v: PlayerView) {
     const part = hand.slice(r * perRow, (r + 1) * perRow);
     handHtml += `<div class="hrow">${part
       .map((c, i) => {
-        const cls = ['tap', selected.has(c.id) ? 'sel' : '', playing && !playable.has(c.id) ? 'dim' : ''].join(' ');
+        const isNew = (newCards.get(c.id) ?? 0) > Date.now();
+        const cls = ['tap', selected.has(c.id) ? 'sel' : '', playing && !playable.has(c.id) ? 'dim' : '', isNew ? 'new' : ''].join(' ');
         return cardHtml(c, cls, `data-card="${c.id}" style="margin-left:${i === 0 ? 0 : step - cw}px;z-index:${i}"`);
       })
       .join('')}</div>`;
@@ -370,9 +455,9 @@ function renderGame(v: PlayerView) {
   if (v.revolution) badges.push('<span class="badge hot">革命中</span>');
   if (v.elevenBack) badges.push('<span class="badge blue">イレブンバック中</span>');
   if (v.bind) badges.push(`<span class="badge">しばり ${v.bind.map((s) => SUIT_MARK[s]).join('')}</span>`);
-  badges.push(`<span class="badge">墓地 ${v.graveyardCount}</span>`);
+  badges.push(`<span class="badge" id="grave">墓地 ${v.graveyardCount}</span>`);
   badges.push(`<span class="badge" id="menu" style="cursor:pointer">≡</span>`);
-  const logLines = v.events.filter((e) => e.kind !== 'info' || e.only === v.me).slice(-3);
+  const logLines = v.events.filter((e) => e.text && (e.kind !== 'info' || e.only === v.me)).slice(-3);
   const fieldCards = v.field ? v.field.cards : [];
   app.innerHTML = `
   <div class="game">
@@ -381,7 +466,7 @@ function renderGame(v: PlayerView) {
         .map((i) => {
           const p = v.players[i];
           const st = statusOf(v, i);
-          return `<div class="opp ${v.waiting === i && !v.over ? 'turn' : ''} ${p.out ? 'out' : ''}">
+          return `<div class="opp ${v.waiting === i && !v.over ? 'turn' : ''} ${p.out ? 'out' : ''}" data-p="${i}">
             <div class="on">${esc(p.name)}</div>
             <div class="oc">${p.count}<small> 枚</small></div>
             <div class="os ${st === 'パス' ? 'pass' : ''}">${st}</div></div>`;
