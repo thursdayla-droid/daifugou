@@ -1,4 +1,5 @@
 import './style.css';
+import titleLogo from './assets/title.webp';
 import { Card, SUIT_MARK, SUITS, Suit, cardFromId, rankLabel, sortHand } from './core/cards';
 import { PlayerView, rankTitle } from './core/game';
 import { analyzePlay, canBeat, isForbiddenFinish, isInverted, legalPlays } from './core/plays';
@@ -157,8 +158,7 @@ function runBanner() {
 function renderTitle(err = '') {
   app.innerHTML = `
   <div class="screen">
-    <div class="suits-deco"><span class="b">♠</span><span class="r">♥</span><span class="b">♣</span><span class="r">♦</span></div>
-    <div class="logo gold-text">大富豪<small>GOLD</small></div>
+    <img class="title-logo" src="${titleLogo}" alt="大富豪 GOLD">
     <div class="panel">
       <input id="name" maxlength="10" placeholder="なまえ" value="${esc(store.name)}">
       <button id="host">部屋を作る</button>
