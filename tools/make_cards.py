@@ -94,6 +94,47 @@ def index(card, rank, suit):
     card.alpha_composite(corner.rotate(180))
 
 
+def face_card(path, suit):
+    """絵札：隅の大きなマークを 紙の色で消して、ほかのカードと同じ 隅の数字を入れられるようにする"""
+    im = Image.open(path).convert('RGBA').resize((W, H), Image.LANCZOS)
+    a = np.asarray(im.convert('RGB')).astype(int)
+    for flip in (False, True):
+        b = a[::-1, ::-1] if flip else a
+        x0, y0, x1, y1 = 78, 98, 380, 470
+        reg = b[y0:y1, x0:x1]
+        light = reg.sum(-1) > 600
+        bg = np.median(reg[light], axis=0)
+        ink = np.sqrt(((reg - bg) ** 2).sum(-1)) > 70
+        # 細いつながり（花の茎など）を切って、塗りつぶしの マークだけ 取り出す
+        solid = ndimage.binary_opening(ink, iterations=9)
+        lab, n = ndimage.label(solid)
+        sizes = ndimage.sum(solid, lab, range(1, n + 1))
+        k = 1 + int(np.argmax(sizes))
+        main = lab == k
+        if suit in ('S', 'C'):
+            # スペード・クローバーは 足（茎と下の三角）も 消す：マークの真下の 細い帯の中の インク
+            ys, xs = np.where(main)
+            cx, bottom = int(xs.mean()), int(ys.max())
+            foot = np.zeros_like(ink)
+            foot[max(0, bottom - 40):min(ink.shape[0], bottom + 70), max(0, cx - 60):cx + 60] = True
+            fl, fn = ndimage.label(ink & foot)
+            for j in range(1, fn + 1):
+                jy, jx = np.where(fl == j)
+                if abs(jx.mean() - cx) < 50:
+                    main |= fl == j
+        mark = ndimage.binary_dilation(main, iterations=9 + 16) & ndimage.binary_dilation(ink, iterations=3)
+        mark = ndimage.binary_dilation(mark, iterations=4)
+        full = np.zeros((H, W), bool)
+        full[y0:y1, x0:x1] = mark
+        m = Image.fromarray((full * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(3))
+        if flip:
+            m = m.rotate(180)
+        fill = Image.new('RGBA', (W, H), tuple(int(v) for v in bg) + (255,))
+        im = Image.composite(fill, im, m)
+        a = np.asarray(im.convert('RGB')).astype(int)
+    return im
+
+
 def save(card, name):
     card.convert('RGB').resize((OUT_W, int(OUT_W * H / W)), Image.LANCZOS).save(f'{OUT}/{name}.webp', quality=86)
 
@@ -110,8 +151,14 @@ for s in SUITS:
             paste_emblem(card, s, cx * W, cy * H, ph)
         index(card, n, s)
         save(card, f'{s}{n}')
-    # 【仮】J・Q・K：絵が届くまで
     for r in (11, 12, 13):
+        import os
+        if os.path.exists(f'{SRC}/{s}{r}.png'):
+            card = face_card(f'{SRC}/{s}{r}.png', s)
+            index(card, r, s)
+            save(card, f'{s}{r}')
+            continue
+        # 【仮】J・Q・K：絵が届くまで
         card = base.copy()
         paste_emblem(card, s, W / 2, H * 0.6, 420)
         d = ImageDraw.Draw(card)
