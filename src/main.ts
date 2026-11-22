@@ -709,5 +709,10 @@ const onTouch = () => {
 };
 document.addEventListener('pointerdown', onTouch, { passive: true });
 document.addEventListener('touchend', onTouch, { passive: true });
+// 横向きの時に出す案内（#app の外に置く）
+const rotate = document.createElement('div');
+rotate.id = 'rotate';
+rotate.innerHTML = '<div class="ph"></div><div>スマホを 縦にして 遊んでください</div>';
+document.body.appendChild(rotate);
 window.addEventListener('resize', () => view && renderGame(view));
 renderTitle();

@@ -122,10 +122,10 @@ input:focus { border-color: var(--gold); }
 .me-name { text-align: center; font-size: 12px; color: var(--muted); }
 .me-name b { color: var(--gold-l); }
 
-.sheet-wrap { position: absolute; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; }
+.sheet-wrap { position: absolute; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; overflow-y: auto; }
 .sheet-wrap.low { align-items: flex-start; background: rgba(0,0,0,.25); pointer-events: none; padding-top: 34%; }
 .sheet-wrap.low .sheet { pointer-events: auto; }
-.sheet { width: 100%; max-width: 380px; background: linear-gradient(180deg, #221a0c, #120e07); border: 1.5px solid var(--gold); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.7); }
+.sheet { width: 100%; max-width: 380px; background: linear-gradient(180deg, #221a0c, #120e07); border: 1.5px solid var(--gold); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.7); max-height: 100%; overflow-y: auto; margin: auto 0; }
 .sheet h2 { margin: 0; font-size: 22px; text-align: center; }
 .sheet p { margin: 0; text-align: center; font-size: 14px; color: var(--ink); line-height: 1.6; }
 .sheet .cards { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
@@ -178,3 +178,10 @@ input:focus { border-color: var(--gold); }
 .card.new { box-shadow: 0 0 0 2px #7fe0ff, 0 0 14px rgba(127,224,255,.9), 0 3px 6px rgba(0,0,0,.5); }
 .card.new::before { content: 'NEW'; position: absolute; z-index: 2; top: auto; bottom: 3px; left: 3px; font-size: 9px; font-weight: 900; color: #04202b; background: #7fe0ff; border-radius: 4px; padding: 1px 3px; letter-spacing: .05em; }
 @media (prefers-reduced-motion: reduce) { .fx-card { display: none; } }
+
+/* 縦向きで遊ぶゲーム（2026-11-22 依頼者「縦でできるゲームに」）。スマホを横にしたら 縦に戻すよう案内する */
+#rotate { display: none; position: fixed; inset: 0; z-index: 100; background: var(--bg); color: var(--gold-l);
+  flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; font-weight: 800; font-size: 18px; }
+#rotate .ph { width: 54px; height: 90px; border: 4px solid var(--gold); border-radius: 12px; animation: turn 1.6s ease-in-out infinite; }
+@keyframes turn { 0%, 30% { transform: rotate(-90deg); } 60%, 100% { transform: rotate(0); } }
+@media (orientation: landscape) and (max-height: 540px) { #rotate { display: flex; } }

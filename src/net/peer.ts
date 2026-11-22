@@ -77,7 +77,8 @@ export function localRoom(name: string, total: number, onMsg: (m: HostMsg) => vo
   room.onHostView = onMsg;
   room.total = total;
   const c = makeHostController(room, () => {});
-  room.start();
+  // 画面側が ctrl を受け取ってから 始める（先に始めると 最初の画面が出ない）
+  setTimeout(() => room.start(), 0);
   return c;
 }
 
