@@ -21,7 +21,8 @@ LABEL = {1: 'A', 11: 'J', 12: 'Q', 13: 'K'}
 
 
 def emblem(suit):
-    im = Image.open(f'{SRC}/{suit}1.png').convert('RGB')
+    # 2〜10 の紋章は 最初のAの絵から取る（2026-11-22 にAだけ 新しい絵に 差し替え）
+    im = Image.open(f'{SRC}/old/{suit}1_v1.png').convert('RGB')
     a = np.asarray(im).astype(int)
     bg = np.array([251, 228, 185])
     # 枠の装飾を避けて 真ん中だけ見る
@@ -161,7 +162,7 @@ base = Image.open(f'{SRC}/base.png').convert('RGBA')
 for s in SUITS:
     a = Image.open(f'{SRC}/{s}1.png').convert('RGBA')
     # A は 枠の金の飾りが大きいので、飾りの内側・紋章の上の すき間に 収める
-    index(a, 1, s, (92, 178, 272, 396))
+    index(a, 1, s, (112, 132, 292, 330))
     save(a, f'{s}1')
     for n in range(2, 11):
         card = base.copy()
