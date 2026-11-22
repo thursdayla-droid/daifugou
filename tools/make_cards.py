@@ -102,7 +102,8 @@ def index_in_box(card, rank, suit, box):
     txt = LABEL[rank]
     bx0, by0, bx1, by1 = box
     bh, bw = by1 - by0, bx1 - bx0
-    line, eh, gap = int(bh * 0.74), int(bh * 0.24), int(bh * 0.03)
+    # 2026-11-22 依頼者「JQKのマークが分かりづらい」：マークを 大きく、塗りつぶしの はっきりした形に
+    line, eh, gap = int(bh * 0.6), int(bh * 0.36), int(bh * 0.03)
     size = 10
     while True:
         f = ImageFont.truetype(FONT, size + 4)
@@ -119,9 +120,28 @@ def index_in_box(card, rank, suit, box):
     bb = dr.textbbox((0, 0), txt, font=f)
     cx = (bx0 + bx1) / 2
     dr.text((cx - (bb[0] + bb[2]) / 2, by0 - bb[1]), txt, font=f, fill=SUITS[suit] + (255,))
-    put(d, EMB[suit], cx, by0 + max(bb[3] - bb[1], line) + gap + eh / 2, h=eh)
+    solid_suit(d, suit, cx, by0 + max(bb[3] - bb[1], line) + gap, eh)
     card.alpha_composite(d)
     card.alpha_composite(d.rotate(180))
+
+
+SUIT_FONT = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+SUIT_CH = {'S': '\u2660', 'H': '\u2665', 'D': '\u2666', 'C': '\u2663'}
+
+
+def solid_suit(d, suit, cx, top, h):
+    """塗りつぶしの マーク（小さくても 形が分かる）"""
+    dr = ImageDraw.Draw(d)
+    size = 10
+    while True:
+        f = ImageFont.truetype(SUIT_FONT, size + 2)
+        b = dr.textbbox((0, 0), SUIT_CH[suit], font=f)
+        if b[3] - b[1] > h:
+            break
+        size += 2
+    f = ImageFont.truetype(SUIT_FONT, size)
+    b = dr.textbbox((0, 0), SUIT_CH[suit], font=f)
+    dr.text((cx - (b[0] + b[2]) / 2, top - b[1]), SUIT_CH[suit], font=f, fill=SUITS[suit] + (255,), stroke_width=3, stroke_fill=(250, 236, 205, 255))
 
 
 def joker_index(card):
