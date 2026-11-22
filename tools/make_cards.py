@@ -92,7 +92,7 @@ def index(card, rank, suit):
     card.alpha_composite(d)
 
 
-FACE_BOX = (116, 178, 290, 378)
+FACE_BOX = (100, 160, 300, 400)
 
 
 def index_in_box(card, rank, suit, box):
@@ -102,7 +102,7 @@ def index_in_box(card, rank, suit, box):
     txt = LABEL[rank]
     bx0, by0, bx1, by1 = box
     bh, bw = by1 - by0, bx1 - bx0
-    line, eh, gap = int(bh * 0.55), int(bh * 0.36), int(bh * 0.05)
+    line, eh, gap = int(bh * 0.74), int(bh * 0.24), int(bh * 0.03)
     size = 10
     while True:
         f = ImageFont.truetype(FONT, size + 4)
@@ -110,7 +110,7 @@ def index_in_box(card, rank, suit, box):
         too = False
         for t in 'JQK':
             b2 = dr.textbbox((0, 0), t, font=f)
-            if b2[3] - b2[1] > line or b2[2] - b2[0] > bw * 1.05:
+            if b2[3] - b2[1] > line or b2[2] - b2[0] > bw * 1.4:
                 too = True
         if too:
             break
