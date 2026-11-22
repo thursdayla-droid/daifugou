@@ -1,5 +1,6 @@
 import './style.css';
 import titleLogo from './assets/title.webp';
+import kemezodiaImg from './assets/kemezodia.webp';
 import { Card, SUIT_MARK, SUITS, Suit, cardFromId, rankLabel, sortHand } from './core/cards';
 import { CardMove, Place, PlayerView, rankTitle } from './core/game';
 import { analyzePlay, canBeat, isForbiddenFinish, isInverted, legalPlays } from './core/plays';
@@ -51,7 +52,8 @@ let lastSeq = 0;
 type Fx =
   | { t: 'banner'; text: string }
   | { t: 'move'; move: CardMove }
-  | { t: 'reveal'; card: string; caption: string };
+  | { t: 'reveal'; card: string; caption: string }
+  | { t: 'exodia'; name: string };
 let fxQ: Fx[] = [];
 let fxBusy = false;
 /** もらったばかりの カード（手札で 光らせる） */
@@ -95,7 +97,8 @@ function onMsg(m: HostMsg) {
     };
     for (const e of v.events) {
       if (e.seq <= lastSeq) continue;
-      if (e.reveal) fxQ.push({ t: 'reveal', card: e.reveal.card, caption: e.reveal.caption });
+      if (e.kind === 'exodia' && e.player !== undefined) fxQ.push({ t: 'exodia', name: e.player === v.me ? 'あなた' : v.players[e.player].name });
+      else if (e.reveal) fxQ.push({ t: 'reveal', card: e.reveal.card, caption: e.reveal.caption });
       else if (e.title) fxQ.push({ t: 'banner', text: e.title });
       if (e.move) {
         fxQ.push({ t: 'move', move: e.move });
@@ -194,6 +197,17 @@ function runFx() {
     layer.appendChild(el);
     setTimeout(() => el.remove(), 1050 * fast);
     return done(1050);
+  }
+  if (f.t === 'exodia') {
+    // ケメゾディア：依頼者の絵（2026-11-22）
+    const el = document.createElement('div');
+    el.className = 'fx-exodia';
+    el.innerHTML = `<div class="ex-flash"></div><img src="${kemezodiaImg}" alt=""><div class="ex-title"><span class="gold-text">ケメゾディア！</span></div><div class="ex-sub">${esc(f.name)} の手札に 6が4枚！</div>`;
+    layer.appendChild(el);
+    el.addEventListener('click', () => el.remove());
+    setTimeout(() => el.remove(), 3600);
+    fxBusy = false;
+    return;
   }
   if (f.t === 'reveal') {
     const el = document.createElement('div');
