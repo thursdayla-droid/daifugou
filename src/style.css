@@ -230,3 +230,7 @@ body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx
 .fx-move-cap b { font-size: 13px; }
 .fx-move-cap span { font-size: 16px; }
 .fx-move-cap small { font-size: 12px; }
+
+/* リビングデッドのケメナイン（2026-11-22） */
+.fx-nine { background: radial-gradient(circle at 50% 45%, rgba(70,20,110,.97), rgba(4,2,8,.98) 70%); animation: exIn .3s ease both, exOut .4s ease 2.4s both; }
+.fx-nine .ex-title { font-size: clamp(28px, 9vw, 40px); text-align: center; line-height: 1.15; white-space: normal; }
