@@ -73,23 +73,36 @@ def paste_emblem(card, suit, cx, cy, h):
     card.alpha_composite(e2, (int(cx - w / 2), int(cy - h / 2)))
 
 
-def index(card, rank, suit):
-    """隅の数字とマーク（左上・右下）"""
+def index(card, rank, suit, box=None):
+    """隅の数字とマーク（左上・右下）。box があれば その中に 収める（絵札：絵に かからないように）"""
     d = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     dr = ImageDraw.Draw(d)
     txt = LABEL.get(rank, str(rank))
     size = 300 if len(txt) == 1 else 220
+    x0, y0, eh, gap, line = 158, 62, 150, 28, 210
+    if box:
+        bx0, by0, bx1, by1 = box
+        bh, bw = by1 - by0, bx1 - bx0
+        line = int(bh * 0.52)
+        eh = int(bh * 0.38)
+        gap = int(bh * 0.06)
+        x0, y0 = (bx0 + bx1) / 2, by0
+        size = 10
+        while True:  # 文字の高さを line に 合わせる
+            f2 = ImageFont.truetype(FONT, size + 4)
+            b2 = dr.textbbox((0, 0), txt, font=f2)
+            if b2[3] - b2[1] > line or b2[2] - b2[0] > bw * 0.95:
+                break
+            size += 4
     f = ImageFont.truetype(FONT, size)
-    x0, y0 = 158, 62
     bb = dr.textbbox((0, 0), txt, font=f)
     tw = bb[2] - bb[0]
     dr.text((x0 - tw / 2 - bb[0], y0 - bb[1]), txt, font=f, fill=SUITS[suit] + (255,), stroke_width=4, stroke_fill=(120, 86, 20, 255))
     th = bb[3] - bb[1]
     corner = d
     e = EMB[suit]
-    eh = 150
     ew = int(e.width * eh / e.height)
-    corner.alpha_composite(e.resize((ew, eh), Image.LANCZOS), (int(x0 - ew / 2), int(y0 + max(th, 210) + 28)))
+    corner.alpha_composite(e.resize((ew, eh), Image.LANCZOS), (int(x0 - ew / 2), int(y0 + max(th, line) + gap)))
     card.alpha_composite(corner)
     card.alpha_composite(corner.rotate(180))
 
@@ -98,6 +111,7 @@ def face_card(path, suit):
     """絵札：隅の大きなマークを 紙の色で消して、ほかのカードと同じ 隅の数字を入れられるようにする"""
     im = Image.open(path).convert('RGBA').resize((W, H), Image.LANCZOS)
     a = np.asarray(im.convert('RGB')).astype(int)
+    box = None
     for flip in (False, True):
         b = a[::-1, ::-1] if flip else a
         x0, y0, x1, y1 = 78, 98, 380, 470
@@ -126,13 +140,17 @@ def face_card(path, suit):
         mark = ndimage.binary_dilation(mark, iterations=4)
         full = np.zeros((H, W), bool)
         full[y0:y1, x0:x1] = mark
+        if not flip:
+            # 消したマークの場所（ここに 隅の数字を入れる）
+            ys, xs = np.where(ndimage.binary_dilation(main, iterations=6))
+            box = (xs.min() + x0, ys.min() + y0, xs.max() + x0, ys.max() + y0)
         m = Image.fromarray((full * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(3))
         if flip:
             m = m.rotate(180)
         fill = Image.new('RGBA', (W, H), tuple(int(v) for v in bg) + (255,))
         im = Image.composite(fill, im, m)
         a = np.asarray(im.convert('RGB')).astype(int)
-    return im
+    return im, box
 
 
 def save(card, name):
@@ -154,8 +172,8 @@ for s in SUITS:
     for r in (11, 12, 13):
         import os
         if os.path.exists(f'{SRC}/{s}{r}.png'):
-            card = face_card(f'{SRC}/{s}{r}.png', s)
-            index(card, r, s)
+            card, box = face_card(f'{SRC}/{s}{r}.png', s)
+            index(card, r, s, box)
             save(card, f'{s}{r}')
             continue
         # 【仮】J・Q・K：絵が届くまで
@@ -172,12 +190,13 @@ for s in SUITS:
 jk = Image.open(f'{SRC}/JK.png').convert('RGBA').resize((W, H), Image.LANCZOS)
 d = Image.new('RGBA', (W, H), (0, 0, 0, 0))
 dr = ImageDraw.Draw(d)
-f = ImageFont.truetype(FONT, 128)
-y = 64
+# 杖や体に かからないよう、左の すき間に 小さめに
+f = ImageFont.truetype(FONT, 84)
+y = 268
 for ch in 'JOKER':
     bb = dr.textbbox((0, 0), ch, font=f)
-    dr.text((112 - (bb[0] + bb[2]) / 2, y - bb[1]), ch, font=f, fill=RED + (255,), stroke_width=6, stroke_fill=(250, 236, 205, 255))
-    y += (bb[3] - bb[1]) + 18
+    dr.text((76 - (bb[0] + bb[2]) / 2, y - bb[1]), ch, font=f, fill=RED + (255,), stroke_width=4, stroke_fill=(250, 236, 205, 255))
+    y += (bb[3] - bb[1]) + 14
 jk.alpha_composite(d)
 jk.alpha_composite(d.rotate(180))
 save(jk, 'JK')
