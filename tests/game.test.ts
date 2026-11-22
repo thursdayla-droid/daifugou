@@ -147,6 +147,53 @@ describe('効果', () => {
     apply(s, 0, { type: 'guess', suit: 'C' });
     expect(s.pending?.type).toBe('kingDiscard');
   });
+  // 5 は 5飛びで 次の人を とばすので、5 のあとは 2つ先の人
+  it('階段しばり：5→6 なら 次は 7 だけ', () => {
+    const s = setup([['S5', 'S9', 'S4'], ['C2', 'C3'], ['H6', 'H10'], ['D7', 'D8', 'D10']]);
+    apply(s, 0, { type: 'play', cards: ['S5'] });
+    expect(apply(s, 2, { type: 'play', cards: ['H6'] })).toBeNull();
+    expect(s.seqBind).toBe(true);
+    expect(s.bind).toBeNull(); // マークが違うので マークしばりは なし
+    expect(apply(s, 3, { type: 'play', cards: ['D10'] })).not.toBeNull();
+    expect(apply(s, 3, { type: 'play', cards: ['D8'] })).not.toBeNull();
+    expect(apply(s, 3, { type: 'play', cards: ['D7'] })).toBeNull();
+  });
+  it('♣5→♣6 なら マークしばりと 階段しばり', () => {
+    const s = setup([['C5', 'S9', 'S4'], ['C2', 'C3'], ['C6', 'H10'], ['C7', 'D7', 'D10']]);
+    apply(s, 0, { type: 'play', cards: ['C5'] });
+    apply(s, 2, { type: 'play', cards: ['C6'] });
+    expect(s.seqBind).toBe(true);
+    expect(s.bind).toEqual(['C']);
+    expect(apply(s, 3, { type: 'play', cards: ['D7'] })).not.toBeNull();
+    expect(apply(s, 3, { type: 'play', cards: ['C7'] })).toBeNull();
+  });
+  it('階段しばり：2枚出し・ジョーカー・流れたら終わり', () => {
+    const s = setup([['S1', 'H1', 'S3'], ['S2', 'H2', 'S10'], ['C9', 'C10', 'D4'], ['JK1', 'C4', 'C5']]);
+    apply(s, 0, { type: 'play', cards: ['S1', 'H1'] });
+    apply(s, 1, { type: 'play', cards: ['S2', 'H2'] });
+    expect(s.seqBind).toBe(true);
+    apply(s, 2, { type: 'pass' });
+    apply(s, 3, { type: 'pass' });
+    apply(s, 0, { type: 'pass' });
+    expect(s.field).toBeNull();
+    expect(s.seqBind).toBe(false);
+  });
+  it('階段しばり中も ジョーカーは 出せる', () => {
+    const s = setup([['S1', 'S3', 'S4'], ['S2', 'H9'], ['JK1', 'C4', 'C5'], ['D9', 'D10']]);
+    apply(s, 0, { type: 'play', cards: ['S1'] });
+    apply(s, 1, { type: 'play', cards: ['S2'] });
+    expect(s.seqBind).toBe(true);
+    expect(apply(s, 2, { type: 'play', cards: ['JK1'] })).toBeNull();
+  });
+  it('階段しばり：強さが逆なら 弱い方へ（2→A なら 次は K）', () => {
+    const s = setup([['S2', 'S9', 'S4'], ['H1', 'H10'], ['D13', 'D12', 'D10'], ['C2', 'C3']]);
+    s.elevenBack = true;
+    apply(s, 0, { type: 'play', cards: ['S2'] });
+    apply(s, 1, { type: 'play', cards: ['H1'] });
+    expect(s.seqBind).toBe(true);
+    expect(apply(s, 2, { type: 'play', cards: ['D12'] })).not.toBeNull();
+    expect(apply(s, 2, { type: 'play', cards: ['D13'] })).toBeNull();
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });

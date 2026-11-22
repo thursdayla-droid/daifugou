@@ -20,6 +20,8 @@ export interface Play {
 export interface FieldCtx {
   field: Play | null;
   bind: Suit[] | null;
+  /** 階段しばり：次は 続きの数字しか出せない（2026-11-22 依頼者） */
+  seqBind?: boolean;
   revolution: boolean;
   elevenBack: boolean;
 }
@@ -71,7 +73,20 @@ export function canBeat(ctx: FieldCtx, play: Play): boolean {
   if (f.value === 16) return false;
   if (play.value === 16) return true;
   if (play.kind === 'single' && play.hasJoker) return true;
+  if (ctx.seqBind && f.kind !== 'stair') return play.value === nextValue(ctx, f.value);
   return isInverted(ctx) ? play.value < f.value : play.value > f.value;
+}
+
+/** 続きの数字（強さが逆の時は 弱い方へ） */
+export function nextValue(ctx: { revolution: boolean; elevenBack: boolean }, v: number): number {
+  return isInverted(ctx) ? v - 1 : v + 1;
+}
+
+/** 階段しばりが かかるか：前と 同じ枚数で、続きの数字（1枚でも 複数枚でも。ジョーカーだけ・階段は なし） */
+export function makesSeqBind(ctx: { revolution: boolean; elevenBack: boolean }, prev: Play, next: Play): boolean {
+  if (prev.kind === 'stair' || next.kind === 'stair') return false;
+  if (prev.value === 16 || next.value === 16) return false;
+  return next.value === nextValue(ctx, prev.value);
 }
 
 /** 8・ジョーカーで 上がれない */

@@ -1,6 +1,6 @@
 // 大富豪のゲーム進行（親＝部屋を作った人の端末で動かす）
 import { Card, Suit, SUITS, SUIT_MARK, cardLabel, makeDeck, mulberry32Step, rankLabel, rankValue } from './cards';
-import { Play, analyzePlay, canBeat, causesRevolution, isForbiddenFinish, legalPlays, makesBind } from './plays';
+import { Play, analyzePlay, canBeat, causesRevolution, isForbiddenFinish, legalPlays, makesBind, makesSeqBind } from './plays';
 
 export interface PlayerState {
   name: string;
@@ -71,6 +71,7 @@ export interface GameState {
   fieldPile: Card[];
   passed: boolean[];
   bind: Suit[] | null;
+  seqBind: boolean;
   revolution: boolean;
   elevenBack: boolean;
   graveyard: Card[];
@@ -131,6 +132,7 @@ export function newGame(players: { name: string; cpu: boolean }[], seed: number)
     fieldPile: [],
     passed: players.map(() => false),
     bind: null,
+    seqBind: false,
     revolution: false,
     elevenBack: false,
     graveyard: [],
@@ -244,6 +246,7 @@ function clearField(s: GameState, why: string) {
   s.fieldOwner = null;
   s.fieldPile = [];
   s.bind = null;
+  s.seqBind = false;
   s.passed = s.players.map(() => false);
   log(s, { kind: 'flow', text: why });
   // イレブンバックは 場が流れたら終わり（2026-11-22 決定）
@@ -279,7 +282,7 @@ function beginTurn(s: GameState) {
 }
 
 export function fieldCtx(s: GameState) {
-  return { field: s.field, bind: s.bind, revolution: s.revolution, elevenBack: s.elevenBack };
+  return { field: s.field, bind: s.bind, seqBind: s.seqBind, revolution: s.revolution, elevenBack: s.elevenBack };
 }
 
 /** いま 誰の入力を待っているか */
@@ -332,6 +335,10 @@ function doPlay(s: GameState, who: number, ids: string[]): string | null {
   s.fieldOwner = who;
   s.passed = s.players.map(() => false);
   log(s, { kind: 'play', player: who, text: `${nm(s, who)}：${cards.map(cardLabel).join(' ')}`, cards: ids });
+  if (prev && !s.seqBind && makesSeqBind(s, prev, play)) {
+    s.seqBind = true;
+    log(s, { kind: 'effect', title: '階段しばり', text: '階段しばり！ 次は 続きの数字しか 出せません' });
+  }
   if (prev && !s.bind) {
     const b = makesBind(prev, play);
     if (b) {
@@ -622,6 +629,7 @@ export interface PlayerView {
   field: Play | null;
   fieldOwner: number | null;
   bind: Suit[] | null;
+  seqBind: boolean;
   revolution: boolean;
   elevenBack: boolean;
   graveyardCount: number;
@@ -664,6 +672,7 @@ export function viewFor(s: GameState, me: number): PlayerView {
     field: s.field,
     fieldOwner: s.fieldOwner,
     bind: s.bind,
+    seqBind: s.seqBind,
     revolution: s.revolution,
     elevenBack: s.elevenBack,
     graveyardCount: s.graveyard.length,

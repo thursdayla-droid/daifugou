@@ -4,7 +4,7 @@ import kemezodiaImg from './assets/kemezodia.webp';
 import kemenineImg from './assets/kemenine.webp';
 import { Card, SUIT_MARK, SUITS, Suit, cardFromId, rankLabel, sortHand } from './core/cards';
 import { CardMove, Place, PlayerView, rankTitle } from './core/game';
-import { analyzePlay, canBeat, isForbiddenFinish, isInverted, legalPlays } from './core/plays';
+import { analyzePlay, canBeat, isForbiddenFinish, isInverted, legalPlays, nextValue } from './core/plays';
 import { Controller, hostRoom, joinRoom, localRoom } from './net/peer';
 import { HostMsg, MAX_PLAYERS } from './net/room';
 import { Sfx, isBgmOn, isMuted, setBgmOn, setMuted, sfx, tryPlayBgm, unlockAudio, wantBgm } from './sound';
@@ -514,6 +514,11 @@ function renderGame(v: PlayerView) {
   badges.push(`<span class="badge">${v.direction === 1 ? '↻ 時計回り' : '↺ 逆回り'}</span>`);
   if (v.revolution) badges.push('<span class="badge hot">革命中</span>');
   if (v.elevenBack) badges.push('<span class="badge blue">イレブンバック中</span>');
+  if (v.seqBind && v.field) {
+    const nv = nextValue(v, v.field.value);
+    const lbl = nv >= 3 && nv <= 13 ? rankLabel(nv) : nv === 14 ? 'A' : nv === 15 ? '2' : 'なし';
+    badges.push(`<span class="badge hot">階段しばり 次は ${lbl}</span>`);
+  }
   if (v.bind) badges.push(`<span class="badge">しばり ${v.bind.map((s) => SUIT_MARK[s]).join('')}</span>`);
 
   badges.push(`<span class="badge" id="menu" style="cursor:pointer">≡</span>`);
@@ -777,6 +782,7 @@ const RULES: [string, string][] = [
   ['ジョーカー（1枚）', '一番強い。2枚以上で出す時は ほかの数字の代わりになれる（9 以外）'],
   ['スペードの3', 'ジョーカー1枚より 強い'],
   ['上がり禁止', '8・ジョーカーでは 上がれない'],
+  ['階段しばり', '前の人の 続きの数字を出すと、場が流れるまで 続きの数字しか出せない（例：5→6 なら 次は 7 だけ）。2枚出しでも起きる。強さが逆の時は 弱い方へ（6→5 なら 次は 4）。ジョーカーは 出せる。同じマークなら マークしばりも かかる'],
   ['しばり', '前の人と 同じマークで出すと、場が流れるまで そのマークしか出せない（片しばりなし）'],
   ['階段', '同じマークの 続き数字 3枚以上。中のカードの効果も 弱い順に 出る（8が入っていたら 流れる）'],
   ['革命', '同じ数字4枚、または マークのそろった階段4枚で 強さが逆になる'],
