@@ -226,9 +226,16 @@ function runFx() {
   const cap = document.createElement('div');
   cap.className = 'fx-move-cap';
   cap.innerHTML = `<b>${esc(mv.label)}</b><span>${esc(placeName(v, mv.from))} <i>→</i> ${esc(placeName(v, mv.to))}</span><small>${mv.count}枚</small>`;
+  // 場のカードに かぶらないよう、上のボタンの すぐ下に 出す
+  const top = document.querySelector('.badges')?.getBoundingClientRect().bottom;
+  if (top) cap.style.top = `${top + 6}px`;
   layer.appendChild(cap);
-  const dur = 800 * fast;
+  // 2026-11-22 依頼者「もらうカード もう少し ゆっくり」：真ん中で 大きく止めてから 届ける
+  const faceUp = !!mv.cards?.length;
+  const dur = (faceUp ? 2300 : 1500) * fast;
   const n = Math.min(mv.count, 4);
+  const midX = window.innerWidth / 2 - 28;
+  const midY = window.innerHeight * 0.45 - 42;
   for (let k = 0; k < n; k++) {
     const wrap = document.createElement('div');
     wrap.className = 'fx-card';
@@ -236,20 +243,22 @@ function runFx() {
     wrap.innerHTML = id ? cardHtml(cardFromId(id)) : backHtml();
     layer.appendChild(wrap);
     const off = (k - (n - 1) / 2) * 18;
+    const spread = (k - (n - 1) / 2) * 92;
     const ax = a.left + a.width / 2 - 28 + off;
     const ay = a.top + a.height / 2 - 42;
     const bx = b.left + b.width / 2 - 28 + off;
     const by = b.top + b.height / 2 - 42;
     wrap.animate(
       [
-        { transform: `translate(${ax}px, ${ay}px) scale(.6)`, opacity: 0 },
-        { transform: `translate(${(ax + bx) / 2}px, ${Math.min(ay, by) - 40}px) scale(1.25)`, opacity: 1, offset: 0.45 },
-        { transform: `translate(${bx}px, ${by}px) scale(.8)`, opacity: 1, offset: 0.9 },
-        { transform: `translate(${bx}px, ${by}px) scale(.6)`, opacity: 0 },
+        { transform: `translate(${ax}px, ${ay}px) scale(.6)`, opacity: 0, easing: 'cubic-bezier(.2,.8,.3,1)' },
+        { transform: `translate(${midX + spread}px, ${midY}px) scale(1.6)`, opacity: 1, offset: 0.25 },
+        { transform: `translate(${midX + spread}px, ${midY}px) scale(1.6)`, opacity: 1, offset: 0.65, easing: 'cubic-bezier(.5,0,.3,1)' },
+        { transform: `translate(${bx}px, ${by}px) scale(.85)`, opacity: 1, offset: 0.93 },
+        { transform: `translate(${bx}px, ${by}px) scale(.7)`, opacity: 0 },
       ],
-      { duration: dur, delay: k * 90 * fast, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'both' },
+      { duration: dur, delay: k * 120 * fast, fill: 'both' },
     );
-    setTimeout(() => wrap.remove(), dur + k * 90 * fast + 50);
+    setTimeout(() => wrap.remove(), dur + k * 120 * fast + 50);
   }
   setTimeout(() => cap.remove(), (dur + 500) * fast);
   return done(dur / fast + 500);
