@@ -55,6 +55,8 @@ def emblem(suit):
 
 EMB = {s: emblem(s) for s in SUITS}
 BASE = Image.open(f'{SRC}/base.png').convert('RGBA').resize((W, H), Image.LANCZOS)
+# 2〜10・A は 金の枠なし（2026-11-22 依頼者）：土台の 内側の紙だけを 広げる
+PLAIN = BASE.crop((140, 140, W - 140, H - 140)).resize((W, H), Image.LANCZOS)
 
 
 def put(card, img, cx, cy, h=None, w=None, flip=False):
@@ -170,12 +172,12 @@ sys.path.insert(0, 'tools')
 from make_cards_v1_face import erase_corner_marks  # noqa: E402
 
 for s in SUITS:
-    a = BASE.copy()
+    a = PLAIN.copy()
     put(a, EMB[s], W * 0.57, H * 0.55, w=W * 0.56)
     index(a, 1, s)
     save(a, f'{s}1')
     for n in range(2, 11):
-        card = BASE.copy()
+        card = PLAIN.copy()
         ph = 190 if n <= 3 else 170 if n <= 8 else 150
         for cx, cy in rows(n):
             put(card, EMB[s], cx * W, cy * H, h=ph, flip=cy > 0.5 + 1e-6)
