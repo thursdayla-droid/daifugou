@@ -538,7 +538,7 @@ function renderGame(v: PlayerView) {
     const lbl = nv >= 3 && nv <= 13 ? rankLabel(nv) : nv === 14 ? 'A' : nv === 15 ? '2' : 'なし';
     badges.push(`<span class="badge hot">階段しばり 次は ${lbl}</span>`);
   }
-  if (v.bind) badges.push(`<span class="badge">しばり ${v.bind.map((s) => SUIT_MARK[s]).join('')}</span>`);
+  if (v.bind) badges.push(`<span class="badge">マークしばり ${v.bind.map((s) => SUIT_MARK[s]).join('')}</span>`);
 
   badges.push(`<span class="badge" id="menu" style="cursor:pointer">≡</span>`);
   const logLines = v.events.filter((e) => e.text && (e.kind !== 'info' || e.only === v.me)).slice(-3);

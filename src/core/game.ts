@@ -343,7 +343,7 @@ function doPlay(s: GameState, who: number, ids: string[]): string | null {
     const b = makesBind(prev, play);
     if (b) {
       s.bind = b;
-      log(s, { kind: 'effect', title: 'しばり', text: `マークしばり（${b.map((x) => SUIT_MARK[x]).join('')}）` });
+      log(s, { kind: 'effect', title: 'マークしばり', text: `マークしばり（${b.map((x) => SUIT_MARK[x]).join('')}）` });
     }
   }
   if (causesRevolution(play)) {

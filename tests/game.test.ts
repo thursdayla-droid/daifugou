@@ -251,6 +251,17 @@ describe('効果', () => {
     apply(s, 0, { type: 'guess', suit: 'H' });
     expect(s.pending).toMatchObject({ type: 'kingDiscard', count: 2 });
   });
+  it('♥5→♠6 は マークしばりに ならない', () => {
+    for (const [x, y] of [['H5', 'S6'], ['H1', 'S2'], ['D9', 'C10']]) {
+      const s = setup([[x, 'S3', 'D4'], [y, 'H3', 'C4'], [y, 'H8', 'C4'], ['D3', 'D7']]);
+      apply(s, 0, { type: 'play', cards: [x] });
+      if (s.pending) apply(s, 0, { type: 'pick', cardId: null });
+      expect(apply(s, s.turn, { type: 'play', cards: [y] })).toBeNull();
+      expect(s.seqBind).toBe(true);
+      expect(s.bind).toBeNull();
+      expect(s.events.some((e) => e.title === 'マークしばり')).toBe(false);
+    }
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });

@@ -40,7 +40,7 @@ export const THEMES: Record<string, Theme> = {
   'キングチャレンジ': { color: '#d4a017', color2: '#fff0a8', glyph: G.crown, anim: 'drop' },
   'エースカウンター': { color: '#c9d4e8', color2: '#ffffff', glyph: G.shield, anim: 'drop' },
   '階段しばり': { color: '#8a5cff', color2: '#e0d2ff', glyph: G.stairs, anim: 'dash' },
-  'しばり': { color: '#7a7f99', color2: '#e6e8f5', glyph: G.chain, anim: 'drop' },
+  'マークしばり': { color: '#7a7f99', color2: '#e6e8f5', glyph: G.chain, anim: 'drop' },
   '革命！': { color: '#ff2a2a', color2: '#ffd700', glyph: G.revolution, anim: 'spin' },
   '革命返し！': { color: '#ffb300', color2: '#fff3b0', glyph: G.revolution, anim: 'spin' },
   '当たり！': { color: '#1fbf4a', color2: '#c4ffd2', glyph: G.hit, anim: 'drop' },
