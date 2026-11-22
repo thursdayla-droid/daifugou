@@ -7,6 +7,7 @@ import { CardMove, Place, PlayerView, rankTitle } from './core/game';
 import { analyzePlay, canBeat, isForbiddenFinish, isInverted, legalPlays, nextValue } from './core/plays';
 import { Controller, hostRoom, joinRoom, localRoom } from './net/peer';
 import { HostMsg, MAX_PLAYERS } from './net/room';
+import { THEMES, showActivate } from './activate';
 import { Sfx, isBgmOn, isMuted, setBgmOn, setMuted, sfx, tryPlayBgm, unlockAudio, wantBgm } from './sound';
 
 const app = document.getElementById('app')!;
@@ -52,6 +53,7 @@ let selected = new Set<string>();
 let lastSeq = 0;
 type Fx =
   | { t: 'banner'; text: string }
+  | { t: 'act'; title: string; cards: string[] }
   | { t: 'move'; move: CardMove }
   | { t: 'reveal'; card: string; caption: string }
   | { t: 'exodia'; name: string }
@@ -62,6 +64,8 @@ let fxBusy = false;
 let holdResult = false;
 /** ドロー3で 選んでいるカード */
 let drawSel = new Set<string>();
+/** トレード4で 選んでいる 伏せたカード */
+let tradeSel = new Set<number>();
 /** もらったばかりの カード（手札で 光らせる） */
 const newCards = new Map<string, number>();
 let toast = '';
@@ -101,12 +105,15 @@ function onMsg(m: HostMsg) {
         cards = n;
       }
     };
+    let lastPlayCards: string[] = v.field ? v.field.cards.map((c) => c.id) : [];
     for (const e of v.events) {
+      if (e.kind === 'play' && e.cards) lastPlayCards = e.cards;
       if (e.seq <= lastSeq) continue;
       if (e.kind === 'exodia') holdResult = true;
       if (e.title === 'リビングデッドのケメナイン' && e.player !== undefined) fxQ.push({ t: 'nine', name: e.player === v.me ? 'あなた' : v.players[e.player].name });
       else if (e.kind === 'exodia' && e.player !== undefined) fxQ.push({ t: 'exodia', name: e.player === v.me ? 'あなた' : v.players[e.player].name });
       else if (e.reveal) fxQ.push({ t: 'reveal', card: e.reveal.card, caption: e.reveal.caption });
+      else if (e.title && THEMES[e.title]) fxQ.push({ t: 'act', title: e.title, cards: e.title === '当たり！' || e.title === 'はずれ…' ? [] : lastPlayCards });
       else if (e.title) fxQ.push({ t: 'banner', text: e.title });
       if (e.move) {
         fxQ.push({ t: 'move', move: e.move });
@@ -135,6 +142,7 @@ function onMsg(m: HostMsg) {
     selected = new Set([...selected].filter((id) => ids.has(id)));
     if (view && view.pending?.type !== v.pending?.type) selected.clear();
     if (v.pending?.type !== 'draw3' || v.pending.asking) drawSel = new Set();
+    if (v.pending?.type !== 'trade' || v.pending.player !== v.me || (view?.pending?.type === 'trade' && view.pending.player !== v.pending.player)) tradeSel = new Set();
     if (view && view.waiting !== v.waiting) selected.clear();
     view = v;
     wantBgm(true);
@@ -228,6 +236,14 @@ function runFx() {
     // 出てすぐは 閉じない（うっかり タップで 見のがさないように）
     setTimeout(() => el.addEventListener('click', close), 1200);
     setTimeout(close, 3600);
+    return;
+  }
+  if (f.t === 'act') {
+    const ch = f.cards.length ? f.cards.slice(0, 4).map((id) => cardHtml(cardFromId(id))).join('') : '';
+    showActivate(layer, f.title, ch, () => {
+      fxBusy = false;
+      runFx();
+    }, Math.round(1500 * fast));
     return;
   }
   if (f.t === 'nine') {
@@ -593,8 +609,9 @@ function sheetHtml(v: PlayerView): string {
     case 'trade':
       return `<div class="sheet-wrap"><div class="sheet">
         <h2 class="gold-text">トレード4</h2>
-        <p>${esc(v.players[p.other].name)} の手札から 1枚 選んでください</p>
-        <div class="cards">${Array.from({ length: p.count }, (_, i) => backHtml('tap', `data-trade="${i}"`)).join('')}</div></div></div>`;
+        <p>${esc(v.players[p.other].name)} の手札から ${p.need}枚 選んでください</p>
+        <div class="cards">${Array.from({ length: p.count }, (_, i) => backHtml(`tap ${tradeSel.has(i) ? 'sel' : ''}`, `data-trade="${i}"`)).join('')}</div>
+        ${p.need > 1 ? `<button id="trade-ok" ${tradeSel.size === p.need ? '' : 'disabled'}>${tradeSel.size === p.need ? 'この カードと 交換' : `あと ${p.need - tradeSel.size}枚 選ぶ`}</button>` : ''}</div></div>`;
     case 'counter':
       return `<div class="sheet-wrap"><div class="sheet">
         <h2 class="gold-text">エースカウンター</h2>
@@ -713,7 +730,25 @@ function bindGame(v: PlayerView, mode: { need: number } | null) {
     renderGame(v);
   });
   on('[data-pick]', (el) => ctrl!.send({ type: 'pick', cardId: el.dataset.pick || null }));
-  on('[data-trade]', (el) => ctrl!.send({ type: 'tradePick', index: Number(el.dataset.trade) }));
+  on('[data-trade]', (el) => {
+    const p = v.pending;
+    if (!p || p.type !== 'trade') return;
+    const i = Number(el.dataset.trade);
+    if (p.need === 1) {
+      ctrl!.send({ type: 'tradePick', indices: [i] });
+      return;
+    }
+    if (tradeSel.has(i)) tradeSel.delete(i);
+    else {
+      if (tradeSel.size >= p.need) tradeSel.delete([...tradeSel][0]);
+      tradeSel.add(i);
+    }
+    renderGame(v);
+  });
+  on('#trade-ok', () => {
+    ctrl!.send({ type: 'tradePick', indices: [...tradeSel] });
+    tradeSel = new Set();
+  });
   on('[data-decide]', (el) => ctrl!.send({ type: 'decide', use: el.dataset.decide === '1' }));
   on('[data-counter]', (el) => {
     const n = Number(el.dataset.counter);
@@ -790,7 +825,7 @@ function renderMenu() {
 
 const RULES: [string, string][] = [
   ['3 ドロー3（任意）', '使うか 先に選ぶ。使うと 墓地からランダムで3枚 見て、好きな1枚を 必ず 手札に加える（3を2枚なら 6枚見て2枚、3枚なら 9枚見て3枚）'],
-  ['4 トレード4（強制）', '次の人と 手札を伏せて、お互いに1枚 選んで 交換する'],
+  ['4 トレード4（強制）', '次の人と 手札を伏せて、お互いに1枚 選んで 交換する（4を2枚なら 2枚、3枚なら 3枚）'],
   ['5 5飛び（強制）', '次の人を とばす（2枚なら 2人とばして 4番目の人の番）'],
   ['6 ケメゾディア', '手札に 6 が4枚 そろったら そのゲームの勝者'],
   ['7 7渡し（強制）', 'いらないカードを 次の人に渡す（出した枚数ぶん）'],
@@ -837,3 +872,7 @@ rotate.innerHTML = '<div class="ph"></div><div>スマホを 縦にして 遊ん�
 document.body.appendChild(rotate);
 window.addEventListener('resize', () => view && renderGame(view));
 renderTitle();
+
+// 確認用：?fxdemo=8切り で 発動演出だけ 出す
+const fxDemo = new URLSearchParams(location.search).get('fxdemo');
+if (fxDemo && THEMES[fxDemo]) showActivate(fxLayer(), fxDemo, cardHtml(cardFromId('S8')), () => {}, 1500);

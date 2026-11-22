@@ -34,7 +34,14 @@ export function cpuAction(v: PlayerView, rnd: () => number): Action {
         return { type: 'cards', cards: best.map((c) => c.id) };
       }
       case 'trade':
-        return { type: 'tradePick', index: Math.floor(rnd() * pd.count) };
+      {
+        const all = Array.from({ length: pd.count }, (_, i) => i);
+        for (let i = all.length - 1; i > 0; i--) {
+          const j = Math.floor(rnd() * (i + 1));
+          [all[i], all[j]] = [all[j], all[i]];
+        }
+        return { type: 'tradePick', indices: all.slice(0, pd.need) };
+      }
       case 'counter':
         return { type: 'counter', use: true, n: pd.max };
       case 'counterGive':

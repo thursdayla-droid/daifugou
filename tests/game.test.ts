@@ -233,6 +233,17 @@ describe('効果', () => {
     expect(s.players[0].hand.length).toBe(4);
     expect(s.graveyard.length).toBe(5);
   });
+  it('4を2枚なら 2枚トレード', () => {
+    const s = setup([['S4', 'H4', 'S9', 'S10', 'S11'], ['H5', 'H6', 'H7'], ['D5', 'D6']]);
+    apply(s, 0, { type: 'play', cards: ['S4', 'H4'] });
+    expect(s.pending).toMatchObject({ type: 'trade', count: 2 });
+    expect(apply(s, 0, { type: 'tradePick', indices: [0] })).not.toBeNull();
+    apply(s, 0, { type: 'tradePick', indices: [0, 1] });
+    apply(s, 1, { type: 'tradePick', indices: [0, 2] });
+    expect(s.players[0].hand.length).toBe(3);
+    expect(s.players[1].hand.length).toBe(3);
+    expect(s.players[0].hand.filter((x) => x.suit === 'H').length).toBe(2);
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });

@@ -11,7 +11,7 @@ export interface PlayerState {
 
 export type Pending =
   | { type: 'draw3'; player: number; options: Card[] | null; count: number } // null＝やるか聞いている。count：出した3の枚数（2026-11-22：2枚なら6枚見て2枚）
-  | { type: 'trade'; a: number; b: number; step: 'a' | 'b'; orderB: string[]; orderA: string[]; pickA: string | null }
+  | { type: 'trade'; a: number; b: number; step: 'a' | 'b'; orderB: string[]; orderA: string[]; pickA: string[]; count: number } // count：4を2枚なら2枚（2026-11-22）
   | { type: 'counter'; player: number; giver: number; count: number; max: number }
   | { type: 'counterGive'; player: number; to: number; count: number; rest: number }
   | { type: 'give7'; player: number; to: number; count: number }
@@ -91,7 +91,7 @@ export type Action =
   | { type: 'pass' }
   | { type: 'pick'; cardId: string | null } // draw3 / nine
   | { type: 'decide'; use: boolean } // draw3 をやるか
-  | { type: 'tradePick'; index: number }
+  | { type: 'tradePick'; index?: number; indices?: number[] }
   | { type: 'counter'; use: boolean; n?: number } // n：使うエースの枚数（7と同じ枚数まで。2026-11-22）
   | { type: 'cards'; cards: string[] } // give7 / counterGive / ten / kingDiscard
   | { type: 'guess'; suit: Suit };
@@ -387,8 +387,9 @@ function startEffects(s: GameState, who: number, play: EffectItem) {
     case 4: {
       const b = nextActive(s, who);
       if (me.hand.length === 0 || b === who || s.players[b].hand.length === 0) return;
-      log(s, { kind: 'effect', player: who, title: 'トレード4', text: `${nm(s, who)} と ${nm(s, b)} が 1枚ずつ交換` });
-      s.pending = { type: 'trade', a: who, b, step: 'a', orderB: shuffle(s, s.players[b].hand.map((c) => c.id)), orderA: [], pickA: null };
+      const tn = Math.min(n, me.hand.length, s.players[b].hand.length);
+      log(s, { kind: 'effect', player: who, title: 'トレード4', text: `${nm(s, who)} と ${nm(s, b)} が ${tn}枚ずつ交換` });
+      s.pending = { type: 'trade', a: who, b, step: 'a', orderB: shuffle(s, s.players[b].hand.map((c) => c.id)), orderA: [], pickA: [], count: tn };
       return;
     }
     case 5:
@@ -507,25 +508,27 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
     }
     case 'trade': {
       if (a.type !== 'tradePick') return '選んでください';
+      const idx = a.indices ?? (a.index !== undefined ? [a.index] : []);
+      if (idx.length !== pd.count || new Set(idx).size !== pd.count) return `${pd.count}枚 選んでください`;
+      const order = pd.step === 'a' ? pd.orderB : pd.orderA;
+      const ids = idx.map((i) => order[i]);
+      if (ids.some((id) => !id)) return '選んでください';
       if (pd.step === 'a') {
-        const id = pd.orderB[a.index];
-        if (!id) return '選んでください';
-        pd.pickA = id;
+        pd.pickA = ids;
         pd.step = 'b';
         pd.orderA = shuffle(s, s.players[pd.a].hand.map((c) => c.id));
         return null;
       }
-      const idB = pd.orderA[a.index];
-      if (!idB) return '選んでください';
-      const fromB = removeCards(s.players[pd.b].hand, [pd.pickA!]);
-      const fromA = removeCards(s.players[pd.a].hand, [idB]);
+      const fromB = removeCards(s.players[pd.b].hand, pd.pickA);
+      const fromA = removeCards(s.players[pd.a].hand, ids);
       s.players[pd.a].hand.push(...fromB);
       s.players[pd.b].hand.push(...fromA);
-      log(s, { kind: 'effect', text: `${nm(s, pd.a)} と ${nm(s, pd.b)} が 1枚ずつ 交換しました` });
-      log(s, { kind: 'info', only: pd.a, text: `もらったカード：${cardLabel(fromB[0])}（渡したカード：${cardLabel(fromA[0])}）`, cards: [fromB[0].id] });
-      log(s, { kind: 'info', only: pd.b, text: `もらったカード：${cardLabel(fromA[0])}（渡したカード：${cardLabel(fromB[0])}）`, cards: [fromA[0].id] });
-      log(s, { kind: 'move', text: '', move: { from: pd.b, to: pd.a, count: 1, label: 'トレード4', cards: [fromB[0].id], vis: [pd.a, pd.b] } });
-      log(s, { kind: 'move', text: '', move: { from: pd.a, to: pd.b, count: 1, label: 'トレード4', cards: [fromA[0].id], vis: [pd.a, pd.b] } });
+      const L = (cs: Card[]) => cs.map(cardLabel).join(' ');
+      log(s, { kind: 'effect', text: `${nm(s, pd.a)} と ${nm(s, pd.b)} が ${fromB.length}枚ずつ 交換しました` });
+      log(s, { kind: 'info', only: pd.a, text: `もらったカード：${L(fromB)}（渡したカード：${L(fromA)}）`, cards: fromB.map((c) => c.id) });
+      log(s, { kind: 'info', only: pd.b, text: `もらったカード：${L(fromA)}（渡したカード：${L(fromB)}）`, cards: fromA.map((c) => c.id) });
+      log(s, { kind: 'move', text: '', move: { from: pd.b, to: pd.a, count: fromB.length, label: 'トレード4', cards: fromB.map((c) => c.id), vis: [pd.a, pd.b] } });
+      log(s, { kind: 'move', text: '', move: { from: pd.a, to: pd.b, count: fromA.length, label: 'トレード4', cards: fromA.map((c) => c.id), vis: [pd.a, pd.b] } });
       break;
     }
     case 'counter': {
@@ -654,7 +657,7 @@ export interface PlayerView {
 
 export type ViewPending =
   | { type: 'draw3'; player: number; asking: boolean; options: Card[] | null; count: number }
-  | { type: 'trade'; player: number; other: number; count: number }
+  | { type: 'trade'; player: number; other: number; count: number; need: number }
   | { type: 'counter'; player: number; giver: number; count: number; max: number }
   | { type: 'counterGive'; player: number; to: number; count: number; rest: number }
   | { type: 'give7'; player: number; to: number; count: number }
@@ -671,7 +674,7 @@ export function viewFor(s: GameState, me: number): PlayerView {
     else if (pd.type === 'trade') {
       const player = pd.step === 'a' ? pd.a : pd.b;
       const other = pd.step === 'a' ? pd.b : pd.a;
-      pending = { type: 'trade', player, other, count: pd.step === 'a' ? pd.orderB.length : pd.orderA.length };
+      pending = { type: 'trade', player, other, count: pd.step === 'a' ? pd.orderB.length : pd.orderA.length, need: pd.count };
     } else pending = pd as ViewPending;
   }
   return {
