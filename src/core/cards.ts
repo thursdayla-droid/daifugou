@@ -11,8 +11,8 @@ export interface Card {
   suit: Suit | null;
 }
 
-/** 【仮】ジョーカーは 2枚 */
-export const JOKER_COUNT = 2;
+/** ジョーカーは 1枚（2026-11-22 決定） */
+export const JOKER_COUNT = 1;
 
 export function makeDeck(): Card[] {
   const deck: Card[] = [];

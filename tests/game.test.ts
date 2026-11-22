@@ -36,7 +36,8 @@ describe('出し方', () => {
     expect(isForbiddenFinish(P('S8'), 1)).toBe(true);
     expect(isForbiddenFinish(P('JK1'), 1)).toBe(true);
     expect(isForbiddenFinish(P('S8'), 2)).toBe(false);
-    expect(isForbiddenFinish(P('S7', 'S8', 'S9'), 3)).toBe(false);
+    expect(isForbiddenFinish(P('S7', 'S8', 'S9'), 3)).toBe(true);
+    expect(isForbiddenFinish(P('S5', 'S6', 'S7'), 3)).toBe(false);
   });
   it('列挙', () => {
     const ps = enumeratePlays(['S3', 'S4', 'S5', 'H5', 'JK1'].map(c));
@@ -95,6 +96,15 @@ describe('効果', () => {
     expect(s.field).toBeNull();
     expect(s.elevenBack).toBe(true);
   });
+  it('階段も効果あり（7→8の順）', () => {
+    const s = setup([['S7', 'S8', 'S9', 'H4', 'H3'], ['H5', 'H6'], ['D5', 'D6']]);
+    apply(s, 0, { type: 'play', cards: ['S7', 'S8', 'S9'] });
+    expect(s.pending?.type).toBe('give7');
+    apply(s, 0, { type: 'cards', cards: ['H4'] });
+    expect(s.players[1].hand.map((x) => x.id)).toContain('H4');
+    expect(s.field).toBeNull(); // 8で流れた
+    expect(s.turn).toBe(0);
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });
@@ -123,7 +133,7 @@ describe('CPUだけで最後まで', () => {
       expect(s.over).toBe(true);
       expect(new Set(s.ranking).size).toBe(n);
       const total = s.players.reduce((a, p) => a + p.hand.length, 0) + s.graveyard.length + s.fieldPile.length + (s.field?.cards.length ?? 0);
-      if (s.exodia === null) expect(total).toBe(54);
+      if (s.exodia === null) expect(total).toBe(53);
     }
   });
 });

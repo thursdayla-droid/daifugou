@@ -78,7 +78,7 @@ export function canBeat(ctx: FieldCtx, play: Play): boolean {
 export function isForbiddenFinish(play: Play, handSize: number): boolean {
   if (play.count !== handSize) return false;
   if (play.hasJoker) return true;
-  if (play.kind !== 'stair' && play.rank === 8) return true;
+  if (play.cards.some((c) => c.rank === 8)) return true; // 階段の中の8も ヤ切り
   return false;
 }
 

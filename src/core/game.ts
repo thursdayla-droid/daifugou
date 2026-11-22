@@ -1,5 +1,5 @@
 // 大富豪のゲーム進行（親＝部屋を作った人の端末で動かす）
-import { Card, Suit, SUITS, SUIT_MARK, cardLabel, makeDeck, mulberry32Step, rankLabel } from './cards';
+import { Card, Suit, SUITS, SUIT_MARK, cardLabel, makeDeck, mulberry32Step, rankLabel, rankValue } from './cards';
 import { Play, analyzePlay, canBeat, causesRevolution, isForbiddenFinish, legalPlays, makesBind } from './plays';
 
 export interface PlayerState {
@@ -35,6 +35,14 @@ export interface AfterPlay {
   actor: number;
   skip: number;
   cut: boolean;
+  /** これから出す効果（階段は 弱い順に 1枚ずつ） */
+  queue: EffectItem[];
+}
+
+export interface EffectItem {
+  rank: number;
+  count: number;
+  suits: Suit[];
 }
 
 export interface GameState {
@@ -313,14 +321,31 @@ function doPlay(s: GameState, who: number, ids: string[]): string | null {
     s.revolution = !s.revolution;
     log(s, { kind: 'revolution', player: who, title: s.revolution ? '革命！' : '革命返し！', text: s.revolution ? '革命！ 強さが逆になります' : '革命返し！' });
   }
-  s.after = { actor: who, skip: 0, cut: false };
-  startEffects(s, who, play);
-  if (!s.pending) finishAfter(s);
+  s.after = { actor: who, skip: 0, cut: false, queue: effectQueue(play) };
+  runEffects(s);
   return null;
 }
 
-function startEffects(s: GameState, who: number, play: Play) {
-  if (play.kind === 'stair' || play.jokerOnly) return; // 【仮】階段・ジョーカーだけは 効果なし
+/** 効果の順番。ジョーカーだけの時は なし【仮】。階段は 弱い順に 1枚ずつ（2026-11-22 決定：階段も効果あり） */
+function effectQueue(play: Play): EffectItem[] {
+  if (play.jokerOnly) return [];
+  if (play.kind === 'stair') {
+    return [...play.cards]
+      .sort((a, b) => rankValue(a.rank) - rankValue(b.rank))
+      .map((c) => ({ rank: c.rank, count: 1, suits: [c.suit!] }));
+  }
+  return [{ rank: play.rank, count: play.count, suits: play.suits }];
+}
+
+function runEffects(s: GameState) {
+  const a = s.after;
+  while (a && a.queue.length && !s.pending && !s.over) {
+    startEffects(s, a.actor, a.queue.shift()!);
+  }
+  if (!s.pending && !s.over) finishAfter(s);
+}
+
+function startEffects(s: GameState, who: number, play: EffectItem) {
   const n = play.count;
   const me = s.players[who];
   const after = s.after!;
@@ -532,7 +557,7 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
   }
   s.pending = null;
   if (checkExodia(s)) return null;
-  finishAfter(s);
+  runEffects(s);
   return null;
 }
 
