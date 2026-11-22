@@ -150,7 +150,7 @@ input:focus { border-color: var(--gold); }
 .topbtn { position: absolute; top: 6px; right: 8px; z-index: 5; padding: 4px 10px; font-size: 12px; border-radius: 99px; }
 
 /* 依頼者のタイトルロゴ（2026-11-22）。黒い背景は 画面の暗さに なじませる */
-.title-logo { width: min(78%, 340px); height: auto; mix-blend-mode: lighten; margin: -8% 0 -6%; pointer-events: none; }
+.title-logo { width: min(82%, 360px); height: auto; mix-blend-mode: lighten; margin: 0 0 4px; pointer-events: none; }
 
 /* 依頼者のカードの絵（2026-11-22）。絵に枠があるので こちらの枠は消す */
 .card.has-img, .card.back.has-art { border: 0; background: #000; box-shadow: 0 3px 6px rgba(0,0,0,.55); border-radius: calc(var(--cw) * .09); }
