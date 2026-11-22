@@ -170,7 +170,7 @@ input:focus { border-color: var(--gold); }
 .fx-move-cap small { font-size: 13px; color: var(--muted); }
 @keyframes capIn { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .fx-reveal { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(0,0,0,.55);
-  --cw: 120px; --ch: 180px; animation: capIn .25s ease both; }
+  --cw: 120px; --ch: 180px; animation: revealIn .25s ease both; }
 .fx-reveal .card { animation: flip .6s ease both; }
 .fx-reveal .fx-cap { font-size: 20px; font-weight: 900; color: #fff; padding: 8px 18px; border-radius: 12px; background: rgba(10,8,4,.85); border: 1.5px solid var(--gold); }
 @keyframes flip { from { transform: rotateY(90deg) scale(.7); } to { transform: rotateY(0) scale(1); } }
@@ -207,7 +207,10 @@ input:focus { border-color: var(--gold); }
 .banner div { white-space: normal; text-align: center; max-width: 100%; font-size: clamp(24px, 8vw, 38px); line-height: 1.2; }
 .fx-move-cap { max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
 .fx-reveal .fx-cap { max-width: calc(100vw - 32px); text-align: center; }
-body.deciding #fx { visibility: hidden; }
+body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx-card { visibility: hidden; }
 .sheet-wrap { align-items: safe center; justify-content: safe center; }
 .sheet { min-width: 0; }
 .suitbtns button { min-width: 0; }
+
+/* めくり画面は 左右に動かさない（capIn は 真ん中寄せの帯用で、左に半分ずれていた） */
+@keyframes revealIn { from { opacity: 0; } to { opacity: 1; } }
