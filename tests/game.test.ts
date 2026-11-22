@@ -29,6 +29,11 @@ describe('出し方', () => {
     expect(canBeat(ctx(['S2']), P('JK1'))).toBe(true);
     expect(canBeat(ctx(['JK1']), P('S3'))).toBe(true); // スペ3
     expect(canBeat(ctx(['JK1']), P('H3'))).toBe(false);
+    expect(canBeat(ctx(['JK1']), P('S4'))).toBe(false);
+    expect(canBeat(ctx(['JK1']), P('S2'))).toBe(false);
+    expect(canBeat(ctx(['JK1'], { bind: ['H'] }), P('S3'))).toBe(true); // しばり中でも ♠3 は出せる
+    expect(canBeat(ctx(['JK1'], { revolution: true }), P('S3'))).toBe(true);
+    expect(canBeat(ctx(['JK1'], { elevenBack: true }), P('H4'))).toBe(false);
     expect(canBeat(ctx(['S5'], { elevenBack: true }), P('H4'))).toBe(true);
     expect(canBeat(ctx(['S5'], { elevenBack: true, revolution: true }), P('H4'))).toBe(false);
     expect(canBeat(ctx(['S5'], { bind: ['S'] }), P('H6'))).toBe(false);

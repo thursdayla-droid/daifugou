@@ -65,12 +65,12 @@ export function canBeat(ctx: FieldCtx, play: Play): boolean {
   const f = ctx.field;
   if (!f) return true;
   if (f.kind !== play.kind || f.count !== play.count) return false;
+  // ジョーカー1枚の時は スペードの3だけ 出せる（しばり中でも。2026-11-22 依頼者「唯一スペードの3」）
+  if (f.kind === 'single' && f.jokerOnly) return play.kind === 'single' && play.rank === 3 && play.suits[0] === 'S';
   if (ctx.bind) {
     const nat = play.suits;
     if (!nat.every((s) => ctx.bind!.includes(s))) return false;
   }
-  // スペードの3は ジョーカー1枚より強い
-  if (f.kind === 'single' && f.jokerOnly) return play.kind === 'single' && play.rank === 3 && play.suits[0] === 'S';
   if (f.value === 16) return false;
   if (play.value === 16) return true;
   if (play.kind === 'single' && play.hasJoker) return true;
