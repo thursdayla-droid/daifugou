@@ -92,6 +92,30 @@ def index(card, rank, suit):
     card.alpha_composite(d)
 
 
+def index_in_box(card, rank, suit, box):
+    """絵札：消したマークの場所（box）に 文字とマーク（左上・右下）"""
+    d = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    dr = ImageDraw.Draw(d)
+    txt = LABEL[rank]
+    bx0, by0, bx1, by1 = box
+    bh, bw = by1 - by0, bx1 - bx0
+    line, eh, gap = int(bh * 0.55), int(bh * 0.36), int(bh * 0.05)
+    size = 10
+    while True:
+        f = ImageFont.truetype(FONT, size + 4)
+        b2 = dr.textbbox((0, 0), txt, font=f)
+        if b2[3] - b2[1] > line or b2[2] - b2[0] > bw * 1.05:
+            break
+        size += 4
+    f = ImageFont.truetype(FONT, size)
+    bb = dr.textbbox((0, 0), txt, font=f)
+    cx = (bx0 + bx1) / 2
+    dr.text((cx - (bb[0] + bb[2]) / 2, by0 - bb[1]), txt, font=f, fill=SUITS[suit] + (255,))
+    put(d, EMB[suit], cx, by0 + max(bb[3] - bb[1], line) + gap + eh / 2, h=eh)
+    card.alpha_composite(d)
+    card.alpha_composite(d.rotate(180))
+
+
 def joker_index(card):
     d = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     dr = ImageDraw.Draw(d)
@@ -183,15 +207,24 @@ for s in SUITS:
             put(card, EMB[s], cx * W, cy * H, h=ph, flip=cy > 0.5 + 1e-6)
         index(card, n, s)
         save(card, f'{s}{n}')
+    # J・Q・K：依頼者の絵を そのまま 大きく（2026-11-22 依頼者「枠の大きさは戻して」）。隅のマークの場所に 文字
     for r in (11, 12, 13):
-        im = erase_corner_marks(f'{SRC}/{s}{r}.png', s)
-        card = figure_card(figure(im, (84, 104, 944, 1436)))
-        index(card, r, s)
-        save(card, f'{s}{r}')
+        im, box = erase_corner_marks(f'{SRC}/{s}{r}.png', s)
+        index_in_box(im, r, s, box)
+        save(im, f'{s}{r}')
 
+# ジョーカー：依頼者の絵を そのまま。左の すき間に たてに JOKER
 jk = Image.open(f'{SRC}/JK.png').convert('RGBA').resize((W, H), Image.LANCZOS)
-card = figure_card(figure(jk, (58, 58, 966, 1478), corner=190))
-joker_index(card)
-save(card, 'JK')
+d = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+dr = ImageDraw.Draw(d)
+f = ImageFont.truetype(FONT, 92)
+y = 230
+for ch in 'JOKER':
+    bb = dr.textbbox((0, 0), ch, font=f)
+    dr.text((80 - (bb[0] + bb[2]) / 2, y - bb[1]), ch, font=f, fill=RED + (255,), stroke_width=4, stroke_fill=(250, 236, 205, 255))
+    y += (bb[3] - bb[1]) + 14
+jk.alpha_composite(d)
+jk.alpha_composite(d.rotate(180))
+save(jk, 'JK')
 save(Image.open(f'{SRC}/back.png').convert('RGBA'), 'back')
 print('ok')

@@ -49,5 +49,5 @@ def erase_corner_marks(path, suit):
         fill = Image.new('RGBA', (W, H), tuple(int(v) for v in bg) + (255,))
         im = Image.composite(fill, im, m)
         a = np.asarray(im.convert('RGB')).astype(int)
-    return im
+    return im, box
 
