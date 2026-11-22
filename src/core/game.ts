@@ -12,8 +12,8 @@ export interface PlayerState {
 export type Pending =
   | { type: 'draw3'; player: number; options: Card[] | null } // null＝やるか聞いている
   | { type: 'trade'; a: number; b: number; step: 'a' | 'b'; orderB: string[]; orderA: string[]; pickA: string | null }
-  | { type: 'counter'; player: number; giver: number; count: number }
-  | { type: 'counterGive'; player: number; to: number }
+  | { type: 'counter'; player: number; giver: number; count: number; max: number }
+  | { type: 'counterGive'; player: number; to: number; count: number; rest: number }
   | { type: 'give7'; player: number; to: number; count: number }
   | { type: 'nine'; player: number; options: { cardId: string; from: 'grave' | number }[]; picked: number }
   | { type: 'ten'; player: number; count: number }
@@ -92,7 +92,7 @@ export type Action =
   | { type: 'pick'; cardId: string | null } // draw3 / nine
   | { type: 'decide'; use: boolean } // draw3 をやるか
   | { type: 'tradePick'; index: number }
-  | { type: 'counter'; use: boolean }
+  | { type: 'counter'; use: boolean; n?: number } // n：使うエースの枚数（7と同じ枚数まで。2026-11-22）
   | { type: 'cards'; cards: string[] } // give7 / counterGive / ten / kingDiscard
   | { type: 'guess'; suit: Suit };
 
@@ -404,7 +404,8 @@ function startEffects(s: GameState, who: number, play: EffectItem) {
       if (count === 0 || to === who) return;
       log(s, { kind: 'effect', player: who, title: '7渡し', text: `${nm(s, who)} が ${nm(s, to)} に ${count}枚 渡します` });
       const hasAce = s.players[to].hand.some((c) => c.rank === 1);
-      s.pending = hasAce ? { type: 'counter', player: to, giver: who, count } : { type: 'give7', player: who, to, count };
+      const aces = s.players[to].hand.filter((c) => c.rank === 1).length;
+      s.pending = hasAce ? { type: 'counter', player: to, giver: who, count, max: Math.min(aces, count) } : { type: 'give7', player: who, to, count };
       return;
     }
     case 8:
@@ -530,15 +531,22 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
     }
     case 'counter': {
       if (a.type !== 'counter') return '選んでください';
-      if (a.use) {
-        const ace = me.hand.find((c) => c.rank === 1);
-        if (!ace) return 'エースがありません';
-        removeCards(me.hand, [ace.id]);
-        s.graveyard.push(ace);
-        log(s, { kind: 'effect', player: who, title: 'エースカウンター', text: `${nm(s, who)} が エースカウンター！ ${cardLabel(ace)} を捨てて 逆に1枚 渡します`, cards: [ace.id] });
-        log(s, { kind: 'move', text: '', move: { from: who, to: 'grave', count: 1, label: 'エースカウンター', cards: [ace.id] } });
+      const n = a.use ? Math.max(1, Math.min(a.n ?? 1, pd.max)) : 0;
+      if (n > 0) {
+        // 7を2枚なら エース2枚で 2枚カウンター。エースが足りない分は 7を出した人から そのまま受け取る
+        const aces = me.hand.filter((c) => c.rank === 1).slice(0, n);
+        if (aces.length < n) return 'エースが足りません';
+        removeCards(me.hand, aces.map((c) => c.id));
+        s.graveyard.push(...aces);
+        log(s, { kind: 'effect', player: who, title: 'エースカウンター', text: `${nm(s, who)} が エースカウンター！ ${aces.map(cardLabel).join(' ')} を捨てて 逆に${n}枚 渡します`, cards: aces.map((c) => c.id) });
+        log(s, { kind: 'move', text: '', move: { from: who, to: 'grave', count: n, label: 'エースカウンター', cards: aces.map((c) => c.id) } });
+        const rest = pd.count - n;
         if (me.hand.length > 0) {
-          s.pending = { type: 'counterGive', player: who, to: pd.giver };
+          s.pending = { type: 'counterGive', player: who, to: pd.giver, count: Math.min(n, me.hand.length), rest };
+          return null;
+        }
+        if (rest > 0 && s.players[pd.giver].hand.length > 0) {
+          s.pending = { type: 'give7', player: pd.giver, to: who, count: Math.min(rest, s.players[pd.giver].hand.length) };
           return null;
         }
         break;
@@ -551,7 +559,7 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
     case 'ten':
     case 'kingDiscard': {
       if (a.type !== 'cards') return 'カードを選んでください';
-      const need = pd.type === 'counterGive' ? 1 : pd.count;
+      const need = pd.count;
       if (a.cards.length !== Math.min(need, me.hand.length)) return `${need}枚 選んでください`;
       if (!hasAll(me.hand, a.cards)) return 'そのカードは持っていません';
       const taken = removeCards(me.hand, a.cards);
@@ -560,6 +568,11 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
         log(s, { kind: 'effect', player: who, text: `${nm(s, who)} が ${nm(s, pd.to)} に ${taken.length}枚 渡しました` });
         log(s, { kind: 'info', only: pd.to, text: `${nm(s, who)} から もらった：${taken.map(cardLabel).join(' ')}`, cards: taken.map((c) => c.id) });
         log(s, { kind: 'move', text: '', move: { from: who, to: pd.to, count: taken.length, label: pd.type === 'give7' ? '7渡し' : 'エースカウンター', cards: taken.map((c) => c.id), vis: [who, pd.to] } });
+        // カウンターで 返しきれなかった分は 7を出した人から 受け取る
+        if (pd.type === 'counterGive' && pd.rest > 0 && me.hand.length > 0 && s.players[pd.to].hand.length > 0) {
+          s.pending = { type: 'give7', player: pd.to, to: who, count: Math.min(pd.rest, s.players[pd.to].hand.length) };
+          return null;
+        }
       } else {
         s.graveyard.push(...taken);
         log(s, { kind: 'effect', player: who, text: `${nm(s, who)} が ${taken.map(cardLabel).join(' ')} を 捨てました`, cards: taken.map((c) => c.id) });
@@ -643,8 +656,8 @@ export interface PlayerView {
 export type ViewPending =
   | { type: 'draw3'; player: number; asking: boolean; options: Card[] | null }
   | { type: 'trade'; player: number; other: number; count: number }
-  | { type: 'counter'; player: number; giver: number; count: number }
-  | { type: 'counterGive'; player: number; to: number }
+  | { type: 'counter'; player: number; giver: number; count: number; max: number }
+  | { type: 'counterGive'; player: number; to: number; count: number; rest: number }
   | { type: 'give7'; player: number; to: number; count: number }
   | { type: 'nine'; player: number; options: { cardId: string; from: 'grave' | number }[]; picked: number }
   | { type: 'ten'; player: number; count: number }

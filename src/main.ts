@@ -423,7 +423,7 @@ function selectionMode(v: PlayerView): { need: number; label: string } | null {
   const p = v.pending;
   if (!p || p.player !== v.me) return null;
   if (p.type === 'give7') return { need: Math.min(p.count, v.hand.length), label: `${v.players[p.to].name} に 渡す` };
-  if (p.type === 'counterGive') return { need: 1, label: `${v.players[p.to].name} に 渡す` };
+  if (p.type === 'counterGive') return { need: Math.min(p.count, v.hand.length), label: `${v.players[p.to].name} に 渡す` };
   if (p.type === 'ten') return { need: Math.min(p.count, v.hand.length), label: '墓地に 捨てる' };
   if (p.type === 'kingDiscard') return { need: Math.min(p.count, v.hand.length), label: '墓地に 捨てる' };
   return null;
@@ -594,8 +594,9 @@ function sheetHtml(v: PlayerView): string {
     case 'counter':
       return `<div class="sheet-wrap"><div class="sheet">
         <h2 class="gold-text">エースカウンター</h2>
-        <p>${esc(v.players[p.giver].name)} から 7渡し（${p.count}枚）が来ます。<br>エースを1枚 捨てて、逆に 1枚 渡しますか？</p>
-        <div class="row"><button class="ghost" data-counter="0">しない</button><button data-counter="1">する</button></div></div></div>`;
+        <p>${esc(v.players[p.giver].name)} から 7渡し（${p.count}枚）が来ます。<br>エースを捨てた枚数だけ、逆に 渡し返せます。</p>
+        <div class="row"><button class="ghost" data-counter="0">しない</button>${Array.from({ length: p.max }, (_, i) => `<button data-counter="${i + 1}">${p.max > 1 ? `エース${i + 1}枚で する` : 'する'}</button>`).join('')}</div>
+        ${p.count > 1 ? `<p class="note">カウンターしなかった分は ${esc(v.players[p.giver].name)} から 受け取ります</p>` : ''}</div></div>`;
     case 'nine':
       return `<div class="sheet-wrap"><div class="sheet">
         <h2 class="gold-text">リビングデッドのケメナイン</h2>
@@ -629,7 +630,7 @@ function pickPanel(v: PlayerView, mode: { need: number; label: string }): string
   const who = (i: number) => esc(v.players[i].name);
   const info: Record<string, [string, string]> = {
     give7: ['7渡し', p.type === 'give7' ? `${who(p.to)} に 渡す<br>カードを ${mode.need}枚 選んでください` : ''],
-    counterGive: ['エースカウンター', p.type === 'counterGive' ? `${who(p.to)} に 渡す<br>カードを 1枚 選んでください` : ''],
+    counterGive: ['エースカウンター', p.type === 'counterGive' ? `${who(p.to)} に 渡す<br>カードを ${mode.need}枚 選んでください` : ''],
     ten: ['10捨て', `墓地に 捨てる<br>カードを ${mode.need}枚 選んでください`],
     kingDiscard: ['キングチャレンジ 成功！', `墓地に 捨てる<br>カードを ${mode.need}枚 選んでください`],
   };
@@ -695,7 +696,10 @@ function bindGame(v: PlayerView, mode: { need: number } | null) {
   on('[data-pick]', (el) => ctrl!.send({ type: 'pick', cardId: el.dataset.pick || null }));
   on('[data-trade]', (el) => ctrl!.send({ type: 'tradePick', index: Number(el.dataset.trade) }));
   on('[data-decide]', (el) => ctrl!.send({ type: 'decide', use: el.dataset.decide === '1' }));
-  on('[data-counter]', (el) => ctrl!.send({ type: 'counter', use: el.dataset.counter === '1' }));
+  on('[data-counter]', (el) => {
+    const n = Number(el.dataset.counter);
+    ctrl!.send({ type: 'counter', use: n > 0, n });
+  });
   on('[data-guess]', (el) => ctrl!.send({ type: 'guess', suit: el.dataset.guess as Suit }));
   on('#again', () => {
     lastSeq = 0;
@@ -777,7 +781,7 @@ const RULES: [string, string][] = [
   ['J イレブンバック（強制）', '数字の強さが逆になり 3が一番強くなる（場が流れたら 元に戻る）'],
   ['Q クイーンリバース（強制）', '回る向きが 逆になる（2枚なら リバースのリバースで そのまま）'],
   ['K キングチャレンジ（強制）', '墓地をシャッフルし、一番上のマークを当てたら 手札を2枚 捨てられる（2枚なら 2回 チャレンジ）'],
-  ['A エースカウンター（任意）', '7渡しを受ける時、エースを捨てて 逆に相手へ1枚 渡せる'],
+  ['A エースカウンター（任意）', '7渡しを受ける時、エースを捨てて 逆に相手へ1枚 渡せる。7を2枚出されたら エース2枚で 2枚 返せる（エースが1枚なら 1枚返して、残りの1枚は 受け取る）'],
   ['2', '効果なし'],
   ['ジョーカー（1枚）', '一番強い。2枚以上で出す時は ほかの数字の代わりになれる（9 以外）'],
   ['スペードの3', 'ジョーカー1枚より 強い'],

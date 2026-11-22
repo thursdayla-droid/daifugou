@@ -37,9 +37,9 @@ export function cpuAction(v: PlayerView, rnd: () => number): Action {
       case 'trade':
         return { type: 'tradePick', index: Math.floor(rnd() * pd.count) };
       case 'counter':
-        return { type: 'counter', use: true };
+        return { type: 'counter', use: true, n: pd.max };
       case 'counterGive':
-        return { type: 'cards', cards: weakest(hand, 1, inv) };
+        return { type: 'cards', cards: weakest(hand, Math.min(pd.count, hand.length), inv) };
       case 'give7':
       case 'ten':
       case 'kingDiscard':

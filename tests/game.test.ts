@@ -194,6 +194,27 @@ describe('効果', () => {
     expect(apply(s, 2, { type: 'play', cards: ['D12'] })).not.toBeNull();
     expect(apply(s, 2, { type: 'play', cards: ['D13'] })).toBeNull();
   });
+  it('7を2枚・エース2枚なら 2枚カウンター', () => {
+    const s = setup([['S7', 'H7', 'S4', 'S9', 'S10'], ['H1', 'D1', 'H6', 'H9'], ['D5', 'D6']]);
+    apply(s, 0, { type: 'play', cards: ['S7', 'H7'] });
+    expect(s.pending).toMatchObject({ type: 'counter', max: 2, count: 2 });
+    apply(s, 1, { type: 'counter', use: true, n: 2 });
+    expect(s.pending).toMatchObject({ type: 'counterGive', count: 2, rest: 0 });
+    apply(s, 1, { type: 'cards', cards: ['H6', 'H9'] });
+    expect(s.pending).toBeNull();
+    expect(s.players[1].hand.length).toBe(0);
+    expect(s.players[0].hand.map((x) => x.id)).toEqual(expect.arrayContaining(['H6', 'H9']));
+  });
+  it('7を2枚・エース1枚なら 1枚カウンターして 1枚受け取る', () => {
+    const s = setup([['S7', 'H7', 'S4', 'S9', 'S10'], ['H1', 'H6', 'H9'], ['D5', 'D6']]);
+    apply(s, 0, { type: 'play', cards: ['S7', 'H7'] });
+    expect(s.pending).toMatchObject({ type: 'counter', max: 1 });
+    apply(s, 1, { type: 'counter', use: true, n: 1 });
+    apply(s, 1, { type: 'cards', cards: ['H6'] });
+    expect(s.pending).toMatchObject({ type: 'give7', player: 0, to: 1, count: 1 });
+    apply(s, 0, { type: 'cards', cards: ['S4'] });
+    expect(s.players[1].hand.map((x) => x.id).sort()).toEqual(['H9', 'S4']);
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });
