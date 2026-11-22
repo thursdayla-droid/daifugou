@@ -160,7 +160,8 @@ def save(card, name):
 base = Image.open(f'{SRC}/base.png').convert('RGBA')
 for s in SUITS:
     a = Image.open(f'{SRC}/{s}1.png').convert('RGBA')
-    index(a, 1, s)
+    # A は 枠の金の飾りが大きいので、飾りの内側・紋章の上の すき間に 収める
+    index(a, 1, s, (92, 178, 272, 396))
     save(a, f'{s}1')
     for n in range(2, 11):
         card = base.copy()
