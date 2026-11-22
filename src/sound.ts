@@ -112,3 +112,55 @@ export function sfx(kind: Sfx, count = 1) {
       break;
   }
 }
+
+// ---------- BGM（試合中だけ。依頼者の曲 public/bgm/game.mp3） ----------
+let bgmOff = false;
+try {
+  bgmOff = localStorage.getItem('dfg-bgm') === '0';
+} catch {
+  /* 保存できなくてもよい */
+}
+let bgm: HTMLAudioElement | null = null;
+let bgmWanted = false;
+
+export function isBgmOn() {
+  return !bgmOff;
+}
+export function setBgmOn(on: boolean) {
+  bgmOff = !on;
+  try {
+    localStorage.setItem('dfg-bgm', on ? '1' : '0');
+  } catch {
+    /* 保存できなくてもよい */
+  }
+  if (on) tryPlayBgm();
+  else bgm?.pause();
+}
+
+/** 試合が始まったら true、タイトルに戻ったら false */
+export function wantBgm(on: boolean) {
+  bgmWanted = on;
+  if (on) tryPlayBgm();
+  else if (bgm) {
+    bgm.pause();
+    bgm.currentTime = 0;
+  }
+}
+
+/** iPhone は タッチのあとでないと 鳴らないので、タッチのたびにも呼ぶ */
+export function tryPlayBgm() {
+  if (!bgmWanted || bgmOff) return;
+  if (!bgm) {
+    bgm = new Audio(`${import.meta.env.BASE_URL}bgm/game.mp3`);
+    bgm.loop = true;
+    bgm.preload = 'auto';
+    bgm.volume = 0.4;
+  }
+  if (bgm.paused) bgm.play().catch(() => {});
+}
+
+// ほかのアプリに切りかえたら 止める
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) bgm?.pause();
+  else tryPlayBgm();
+});

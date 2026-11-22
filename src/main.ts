@@ -4,7 +4,7 @@ import { PlayerView, rankTitle } from './core/game';
 import { analyzePlay, canBeat, isForbiddenFinish, isInverted, legalPlays } from './core/plays';
 import { Controller, hostRoom, joinRoom, localRoom } from './net/peer';
 import { HostMsg, MAX_PLAYERS } from './net/room';
-import { Sfx, isMuted, setMuted, sfx, unlockAudio } from './sound';
+import { Sfx, isBgmOn, isMuted, setBgmOn, setMuted, sfx, tryPlayBgm, unlockAudio, wantBgm } from './sound';
 
 const app = document.getElementById('app')!;
 
@@ -110,6 +110,7 @@ function onMsg(m: HostMsg) {
     if (view && view.pending?.type !== v.pending?.type) selected.clear();
     if (view && view.waiting !== v.waiting) selected.clear();
     view = v;
+    wantBgm(true);
     render();
     runBanner();
   } else if (m.t === 'err') {
@@ -127,6 +128,7 @@ function onMsg(m: HostMsg) {
 }
 
 function resetAll() {
+  wantBgm(false);
   ctrl = null;
   view = null;
   lobby = null;
@@ -551,6 +553,7 @@ function renderMenu() {
   el.innerHTML = `<div class="sheet"><h2 class="gold-text">メニュー</h2>
     <button id="m-rules" class="ghost">ルールを見る</button>
     <button id="m-sound" class="ghost">効果音：${isMuted() ? 'オフ' : 'オン'}</button>
+    <button id="m-bgm" class="ghost">BGM：${isBgmOn() ? 'オン' : 'オフ'}</button>
     <button id="m-quit" class="ghost">${ctrl?.isHost ? '部屋を閉じる' : '部屋を出る'}</button>
     <button id="m-close">もどる</button></div>`;
   g.appendChild(el);
@@ -561,6 +564,10 @@ function renderMenu() {
   (el.querySelector('#m-sound') as HTMLElement).onclick = (ev) => {
     setMuted(!isMuted());
     (ev.currentTarget as HTMLElement).textContent = `効果音：${isMuted() ? 'オフ' : 'オン'}`;
+  };
+  (el.querySelector('#m-bgm') as HTMLElement).onclick = (ev) => {
+    setBgmOn(!isBgmOn());
+    (ev.currentTarget as HTMLElement).textContent = `BGM：${isBgmOn() ? 'オン' : 'オフ'}`;
   };
   (el.querySelector('#m-rules') as HTMLElement).onclick = () => {
     showMenu = false;
@@ -609,7 +616,11 @@ function renderRulesOver(parent: HTMLElement) {
   };
 }
 
-document.addEventListener('pointerdown', unlockAudio, { passive: true });
-document.addEventListener('touchend', unlockAudio, { passive: true });
+const onTouch = () => {
+  unlockAudio();
+  tryPlayBgm();
+};
+document.addEventListener('pointerdown', onTouch, { passive: true });
+document.addEventListener('touchend', onTouch, { passive: true });
 window.addEventListener('resize', () => view && renderGame(view));
 renderTitle();
