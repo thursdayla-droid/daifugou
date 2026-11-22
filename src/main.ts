@@ -501,7 +501,7 @@ function renderGame(v: PlayerView) {
   if (v.revolution) badges.push('<span class="badge hot">革命中</span>');
   if (v.elevenBack) badges.push('<span class="badge blue">イレブンバック中</span>');
   if (v.bind) badges.push(`<span class="badge">しばり ${v.bind.map((s) => SUIT_MARK[s]).join('')}</span>`);
-  badges.push(`<span class="badge" id="grave">墓地 ${v.graveyardCount}</span>`);
+
   badges.push(`<span class="badge" id="menu" style="cursor:pointer">≡</span>`);
   const logLines = v.events.filter((e) => e.text && (e.kind !== 'info' || e.only === v.me)).slice(-3);
   const fieldCards = v.field ? v.field.cards : [];
@@ -520,7 +520,7 @@ function renderGame(v: PlayerView) {
         .join('')}</div>
       <div class="badges">${badges.join('')}</div>
     </div>
-    <div class="center">${
+    <div class="center">${graveHtml(v.graveyardCount)}${
       mode
         ? pickPanel(v, mode)
         : `
@@ -592,6 +592,15 @@ function sheetHtml(v: PlayerView): string {
         <div class="suitbtns">${SUITS.map((s) => `<button class="${s === 'H' || s === 'D' ? 'r' : ''}" data-guess="${s}">${SUIT_MARK[s]}</button>`).join('')}</div></div></div>`;
   }
   return '';
+}
+
+/** 墓地：裏のカードを 枚数ぶん 重ねて見せる（2026-11-22 依頼者） */
+function graveHtml(n: number): string {
+  const layers = Math.min(n, 54);
+  let stack = '';
+  for (let i = 0; i < layers - 1; i++) stack += `<i style="transform:translate(${-i * 0.35}px,${-i * 1.1}px)"></i>`;
+  const top = layers > 0 ? `<div class="g-top" style="transform:translate(${-(layers - 1) * 0.35}px,${-(layers - 1) * 1.1}px)">${backHtml()}</div>` : '<div class="g-empty"></div>';
+  return `<div class="grave" id="grave"><div class="g-stack">${stack}${top}</div><div class="g-label">墓地 <b>${n}</b>枚</div></div>`;
 }
 
 /** 手札からカードを選ぶ時（7渡し・エースカウンター・10捨て・キングチャレンジ成功）：
