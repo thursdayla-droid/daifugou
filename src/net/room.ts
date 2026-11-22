@@ -27,6 +27,7 @@ export class Room {
   /** 親の画面 */
   onHostView: (msg: HostMsg) => void = () => {};
   private cpuTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastCpuSeq = 0;
   private seatOfGame: number[] = []; // ゲーム内の番号 → seats の番号
 
   constructor(public code: string, hostName: string) {
@@ -94,6 +95,7 @@ export class Room {
       [order[i], order[j]] = [order[j], order[i]];
     }
     this.seatOfGame = order;
+    this.lastCpuSeq = 0;
     this.game = newGame(
       order.map((k) => ({ name: this.seats[k].name, cpu: this.seats[k].kind === 'cpu' })),
       seed,
@@ -146,11 +148,14 @@ export class Room {
     if (!g || g.over) return;
     const w = waitingFor(g);
     if (w === null || !g.players[w].cpu) return;
-    const delay = g.pending ? 900 : 1000 + Math.random() * 500;
+    // 【仮】人が見て分かる速さ。大きな文字が出た直後は もう少し待つ
+    const recent = g.events.slice(-4).some((e) => e.title && e.seq > this.lastCpuSeq);
+    const delay = (g.pending ? 1600 : 2000 + Math.random() * 1000) + (recent ? 1200 : 0);
     this.cpuTimer = setTimeout(() => {
       this.cpuTimer = null;
       const gg = this.game;
       if (!gg || gg.over || waitingFor(gg) !== w) return;
+      this.lastCpuSeq = gg.seq;
       const a = cpuAction(viewFor(gg, w), Math.random);
       const err = apply(gg, w, a);
       if (err) apply(gg, w, gg.field && !gg.pending ? { type: 'pass' } : a);

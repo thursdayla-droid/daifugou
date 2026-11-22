@@ -4,6 +4,7 @@ import { PlayerView, rankTitle } from './core/game';
 import { analyzePlay, canBeat, isForbiddenFinish, isInverted, legalPlays } from './core/plays';
 import { Controller, hostRoom, joinRoom, localRoom } from './net/peer';
 import { HostMsg, MAX_PLAYERS } from './net/room';
+import { Sfx, isMuted, setMuted, sfx, unlockAudio } from './sound';
 
 const app = document.getElementById('app')!;
 
@@ -74,9 +75,34 @@ function onMsg(m: HostMsg) {
   } else if (m.t === 'view') {
     const v = m.view;
     // 新しい出来事 → 大きな文字
+    let sound: Sfx | null = null;
+    let cards = 1;
+    const rank: Record<Sfx, number> = { pass: 1, play: 2, flow: 3, effect: 4, myturn: 0, finish: 5, big: 6 };
+    const want = (k: Sfx, n = 1) => {
+      if (!sound || rank[k] > rank[sound]) {
+        sound = k;
+        cards = n;
+      }
+    };
     for (const e of v.events) {
-      if (e.seq > lastSeq && e.title) bannerQ.push(e.title);
+      if (e.seq <= lastSeq) continue;
+      if (e.title) bannerQ.push(e.title);
+      if (e.kind === 'play') want('play', e.cards?.length ?? 1);
+      else if (e.kind === 'pass') want('pass');
+      else if (e.kind === 'flow') want('flow');
+      else if (e.kind === 'finish') want('finish');
+      else if (e.kind === 'revolution' || e.kind === 'exodia') want('big');
+      else if (e.title) want('effect');
     }
+    const myTurnNow = !v.over && v.waiting === v.me && (!view || view.waiting !== v.me);
+    if (sound) {
+      // カードの音のあとに 効果の音
+      if (sound !== 'play' && v.events.some((e) => e.seq > lastSeq && e.kind === 'play')) {
+        sfx('play', v.events.find((e) => e.seq > lastSeq && e.kind === 'play')?.cards?.length ?? 1);
+        const later = sound;
+        setTimeout(() => sfx(later), 180);
+      } else sfx(sound, cards);
+    } else if (myTurnNow) sfx('myturn');
     if (v.events.length) lastSeq = Math.max(lastSeq, v.events[v.events.length - 1].seq);
     // 手札にないカードは 選択から外す
     const ids = new Set(v.hand.map((c) => c.id));
@@ -524,12 +550,17 @@ function renderMenu() {
   el.className = 'sheet-wrap';
   el.innerHTML = `<div class="sheet"><h2 class="gold-text">メニュー</h2>
     <button id="m-rules" class="ghost">ルールを見る</button>
+    <button id="m-sound" class="ghost">効果音：${isMuted() ? 'オフ' : 'オン'}</button>
     <button id="m-quit" class="ghost">${ctrl?.isHost ? '部屋を閉じる' : '部屋を出る'}</button>
     <button id="m-close">もどる</button></div>`;
   g.appendChild(el);
   (el.querySelector('#m-close') as HTMLElement).onclick = () => {
     showMenu = false;
     el.remove();
+  };
+  (el.querySelector('#m-sound') as HTMLElement).onclick = (ev) => {
+    setMuted(!isMuted());
+    (ev.currentTarget as HTMLElement).textContent = `効果音：${isMuted() ? 'オフ' : 'オン'}`;
   };
   (el.querySelector('#m-rules') as HTMLElement).onclick = () => {
     showMenu = false;
@@ -578,5 +609,7 @@ function renderRulesOver(parent: HTMLElement) {
   };
 }
 
+document.addEventListener('pointerdown', unlockAudio, { passive: true });
+document.addEventListener('touchend', unlockAudio, { passive: true });
 window.addEventListener('resize', () => view && renderGame(view));
 renderTitle();
