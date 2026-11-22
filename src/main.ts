@@ -520,13 +520,13 @@ function renderGame(v: PlayerView) {
         .join('')}</div>
       <div class="badges">${badges.join('')}</div>
     </div>
-    <div class="center">${graveHtml(v.graveyardCount)}${
+    <div class="center">${
       mode
         ? pickPanel(v, mode)
         : `
-      <div class="field ${fieldCards.length > 3 ? 'many' : ''}">${
+      <div class="field-row">${graveHtml(v.graveyardCount)}<div class="field ${fieldCards.length > 3 ? 'many' : ''}">${
         fieldCards.length ? fieldCards.map((c) => cardHtml(c)).join('') : '<div class="field-empty">場は 空です</div>'
-      }</div>
+      }</div><div class="grave-spacer"></div></div>
       <div class="fieldby">${v.field && v.fieldOwner !== null ? `${esc(v.players[v.fieldOwner].name)} が 出しました` : ''}</div>
       <div class="turnmsg ${t.mine ? 'mine' : ''}">${esc(toast || t.text)}</div>`
     }</div>

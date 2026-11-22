@@ -236,7 +236,7 @@ body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx
 .fx-nine .ex-title { font-size: clamp(28px, 9vw, 40px); text-align: center; line-height: 1.15; white-space: normal; }
 
 /* 墓地の山（2026-11-22）。枚数ぶん 裏のカードが 重なって 高くなる */
-.grave { position: absolute; left: max(10px, env(safe-area-inset-left, 0px)); top: 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 2; pointer-events: none; }
+.grave { position: static; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 2; pointer-events: none; }
 .g-stack { --cw: 42px; --ch: 63px; position: relative; width: var(--cw); height: calc(var(--ch) + 60px); }
 .g-stack i, .g-stack .g-top, .g-stack .g-empty { position: absolute; left: 0; bottom: 0; width: var(--cw); height: var(--ch); border-radius: 5px; }
 .g-stack i { background: #1a140a; border: 1px solid #8a6a1c; box-shadow: 0 1px 0 rgba(0,0,0,.5); }
@@ -246,4 +246,9 @@ body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx
 .g-label b { color: var(--gold-l); font-size: 14px; }
 
 /* 墓地の山が 文字に かからないよう、真ん中の文字は 左右に 余白 */
-.fieldby, .turnmsg { padding-left: 64px; padding-right: 64px; }
+
+
+/* 墓地は 場のカードの 横に並べる（文字とは 別の段。2026-11-22 依頼者「文字の上に重ねないで」） */
+.field-row { display: flex; align-items: flex-end; justify-content: center; gap: 8px; width: 100%; padding: 0 10px; }
+.field-row .field { flex: 1 1 auto; min-width: 0; padding: 0; }
+.field-row .grave, .grave-spacer { flex: 0 0 52px; }
