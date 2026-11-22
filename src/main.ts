@@ -60,6 +60,8 @@ let fxQ: Fx[] = [];
 let fxBusy = false;
 /** ケメゾディアの登場が 終わるまで 結果を出さない（2026-11-22 依頼者） */
 let holdResult = false;
+/** ドロー3で 選んでいるカード */
+let drawSel = new Set<string>();
 /** もらったばかりの カード（手札で 光らせる） */
 const newCards = new Map<string, number>();
 let toast = '';
@@ -132,6 +134,7 @@ function onMsg(m: HostMsg) {
     const ids = new Set(v.hand.map((c) => c.id));
     selected = new Set([...selected].filter((id) => ids.has(id)));
     if (view && view.pending?.type !== v.pending?.type) selected.clear();
+    if (v.pending?.type !== 'draw3' || v.pending.asking) drawSel = new Set();
     if (view && view.waiting !== v.waiting) selected.clear();
     view = v;
     wantBgm(true);
@@ -580,12 +583,13 @@ function sheetHtml(v: PlayerView): string {
       if (p.asking)
         return `<div class="sheet-wrap"><div class="sheet">
         <h2 class="gold-text">ドロー3</h2>
-        <p>墓地からランダムで3枚 見て、1枚 手札に加えます。<br>使うと 必ず1枚 取ります。使いますか？</p>
+        <p>墓地からランダムで${3 * p.count}枚 見て、${p.count}枚 手札に加えます。<br>使うと 必ず${p.count}枚 取ります。使いますか？</p>
         <div class="row"><button class="ghost" data-decide="0">使わない</button><button data-decide="1">使う</button></div></div></div>`;
       return `<div class="sheet-wrap"><div class="sheet">
         <h2 class="gold-text">ドロー3</h2>
-        <p>墓地から出た ${p.options?.length ?? 0}枚。<br>1枚 選んで 手札に加えてください</p>
-        <div class="cards big">${(p.options ?? []).map((c) => cardHtml(c, 'tap', `data-pick="${c.id}"`)).join('')}</div></div></div>`;
+        <p>墓地から出た ${p.options?.length ?? 0}枚。<br>${p.count}枚 選んで 手札に加えてください</p>
+        <div class="cards ${(p.options?.length ?? 0) > 3 ? '' : 'big'}">${(p.options ?? []).map((c) => cardHtml(c, `tap ${drawSel.has(c.id) ? 'sel' : ''}`, `data-draw="${c.id}"`)).join('')}</div>
+        <button id="draw-ok" ${drawSel.size === p.count ? '' : 'disabled'}>${drawSel.size === p.count ? '手札に 加える' : `あと ${p.count - drawSel.size}枚 選ぶ`}</button></div></div>`;
     case 'trade':
       return `<div class="sheet-wrap"><div class="sheet">
         <h2 class="gold-text">トレード4</h2>
@@ -689,6 +693,21 @@ function bindGame(v: PlayerView, mode: { need: number } | null) {
     ctrl!.send({ type: 'cards', cards: [...selected] });
     selected.clear();
   });
+  on('[data-draw]', (el) => {
+    const p = v.pending;
+    if (!p || p.type !== 'draw3') return;
+    const id = el.dataset.draw!;
+    if (drawSel.has(id)) drawSel.delete(id);
+    else {
+      if (drawSel.size >= p.count) drawSel.delete([...drawSel][0]);
+      drawSel.add(id);
+    }
+    renderGame(v);
+  });
+  on('#draw-ok', () => {
+    ctrl!.send({ type: 'cards', cards: [...drawSel] });
+    drawSel = new Set();
+  });
   on('[data-unpick]', (el) => {
     selected.delete(el.dataset.unpick!);
     renderGame(v);
@@ -770,7 +789,7 @@ function renderMenu() {
 }
 
 const RULES: [string, string][] = [
-  ['3 ドロー3（任意）', '使うか 先に選ぶ。使うと 墓地からランダムで3枚 見て、好きな1枚を 必ず 手札に加える'],
+  ['3 ドロー3（任意）', '使うか 先に選ぶ。使うと 墓地からランダムで3枚 見て、好きな1枚を 必ず 手札に加える（3を2枚なら 6枚見て2枚、3枚なら 9枚見て3枚）'],
   ['4 トレード4（強制）', '次の人と 手札を伏せて、お互いに1枚 選んで 交換する'],
   ['5 5飛び（強制）', '次の人を とばす（2枚なら 2人とばして 4番目の人の番）'],
   ['6 ケメゾディア', '手札に 6 が4枚 そろったら そのゲームの勝者'],

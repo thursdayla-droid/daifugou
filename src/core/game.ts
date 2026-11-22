@@ -10,7 +10,7 @@ export interface PlayerState {
 }
 
 export type Pending =
-  | { type: 'draw3'; player: number; options: Card[] | null } // null＝やるか聞いている
+  | { type: 'draw3'; player: number; options: Card[] | null; count: number } // null＝やるか聞いている。count：出した3の枚数（2026-11-22：2枚なら6枚見て2枚）
   | { type: 'trade'; a: number; b: number; step: 'a' | 'b'; orderB: string[]; orderA: string[]; pickA: string | null }
   | { type: 'counter'; player: number; giver: number; count: number; max: number }
   | { type: 'counterGive'; player: number; to: number; count: number; rest: number }
@@ -381,7 +381,7 @@ function startEffects(s: GameState, who: number, play: EffectItem) {
     case 3: {
       if (s.graveyard.length === 0 || me.out) return;
       log(s, { kind: 'effect', player: who, title: 'ドロー3', text: `${nm(s, who)} が ドロー3を 使うか 選んでいます` });
-      s.pending = { type: 'draw3', player: who, options: null };
+      s.pending = { type: 'draw3', player: who, options: null, count: n };
       return;
     }
     case 4: {
@@ -490,17 +490,19 @@ function applyPending(s: GameState, who: number, a: Action): string | null {
           log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は ドロー3を 使いませんでした` });
           break;
         }
-        pd.options = shuffle(s, s.graveyard).slice(0, 3);
+        pd.options = shuffle(s, s.graveyard).slice(0, 3 * pd.count);
         log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 墓地から${pd.options.length}枚 見ています` });
         return null;
       }
-      if (a.type !== 'pick' || !a.cardId) return '1枚 選んでください';
-      const k = s.graveyard.findIndex((c) => c.id === a.cardId);
-      if (k < 0 || !pd.options.some((c) => c.id === a.cardId)) return 'そのカードは選べません';
-      me.hand.push(...s.graveyard.splice(k, 1));
-      log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 墓地から1枚 手札に加えました` });
-      log(s, { kind: 'info', only: who, text: `手札に加えた：${cardLabel(cardOf(a.cardId))}`, cards: [a.cardId] });
-      log(s, { kind: 'move', text: '', move: { from: 'grave', to: who, count: 1, label: 'ドロー3', cards: [a.cardId], vis: [who] } });
+      const need = Math.min(pd.count, pd.options.length);
+      const ids = a.type === 'pick' && a.cardId ? [a.cardId] : a.type === 'cards' ? a.cards : [];
+      if (ids.length !== need || new Set(ids).size !== need) return `${need}枚 選んでください`;
+      if (!ids.every((id) => pd.options!.some((c) => c.id === id) && s.graveyard.some((c) => c.id === id))) return 'そのカードは選べません';
+      const got = removeCards(s.graveyard, ids);
+      me.hand.push(...got);
+      log(s, { kind: 'effect', player: who, text: `${nm(s, who)} は 墓地から${got.length}枚 手札に加えました` });
+      log(s, { kind: 'info', only: who, text: `手札に加えた：${got.map(cardLabel).join(' ')}`, cards: ids });
+      log(s, { kind: 'move', text: '', move: { from: 'grave', to: who, count: got.length, label: 'ドロー3', cards: ids, vis: [who] } });
       break;
     }
     case 'trade': {
@@ -651,7 +653,7 @@ export interface PlayerView {
 }
 
 export type ViewPending =
-  | { type: 'draw3'; player: number; asking: boolean; options: Card[] | null }
+  | { type: 'draw3'; player: number; asking: boolean; options: Card[] | null; count: number }
   | { type: 'trade'; player: number; other: number; count: number }
   | { type: 'counter'; player: number; giver: number; count: number; max: number }
   | { type: 'counterGive'; player: number; to: number; count: number; rest: number }
@@ -665,7 +667,7 @@ export function viewFor(s: GameState, me: number): PlayerView {
   let pending: ViewPending | null = null;
   const pd = s.pending;
   if (pd) {
-    if (pd.type === 'draw3') pending = { type: 'draw3', player: pd.player, asking: !pd.options, options: pd.player === me ? pd.options : null };
+    if (pd.type === 'draw3') pending = { type: 'draw3', player: pd.player, asking: !pd.options, options: pd.player === me ? pd.options : null, count: Math.min(pd.count, pd.options?.length ?? pd.count) };
     else if (pd.type === 'trade') {
       const player = pd.step === 'a' ? pd.a : pd.b;
       const other = pd.step === 'a' ? pd.b : pd.a;

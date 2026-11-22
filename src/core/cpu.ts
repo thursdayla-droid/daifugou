@@ -29,10 +29,9 @@ export function cpuAction(v: PlayerView, rnd: () => number): Action {
         if (pd.asking) return { type: 'decide', use: true };
         const opts = pd.options ?? [];
         const sixes = hand.filter((c) => c.rank === 6).length;
-        const six = opts.find((c) => c.rank === 6);
-        if (six && sixes >= 2) return { type: 'pick', cardId: six.id };
-        const best = [...opts].sort((a, b) => strength(b, inv) - strength(a, inv))[0];
-        return { type: 'pick', cardId: best.id };
+        const rank = (c: Card) => (c.rank === 6 && sixes >= 2 ? 100 : strength(c, inv));
+        const best = [...opts].sort((a, b) => rank(b) - rank(a)).slice(0, pd.count);
+        return { type: 'cards', cards: best.map((c) => c.id) };
       }
       case 'trade':
         return { type: 'tradePick', index: Math.floor(rnd() * pd.count) };

@@ -252,3 +252,4 @@ body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx
 .field-row { display: flex; align-items: flex-end; justify-content: center; gap: 8px; width: 100%; padding: 0 10px; }
 .field-row .field { flex: 1 1 auto; min-width: 0; padding: 0; }
 .field-row .grave, .grave-spacer { flex: 0 0 52px; }
+.sheet .cards .card.sel { transform: translateY(-6px); }

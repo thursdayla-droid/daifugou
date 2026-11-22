@@ -221,6 +221,18 @@ describe('効果', () => {
     apply(s, 0, { type: 'cards', cards: ['S4'] });
     expect(s.players[1].hand.map((x) => x.id).sort()).toEqual(['H9', 'S4']);
   });
+  it('3を2枚なら 6枚見て 2枚取る', () => {
+    const s = setup([['S3', 'H3', 'S4', 'S9'], ['H5', 'H6'], ['D5', 'D6']]);
+    s.graveyard = ['C9', 'C10', 'D9', 'D10', 'H9', 'H10', 'C12'].map(c);
+    apply(s, 0, { type: 'play', cards: ['S3', 'H3'] });
+    apply(s, 0, { type: 'decide', use: true });
+    const opts = s.pending?.type === 'draw3' ? s.pending.options! : [];
+    expect(opts.length).toBe(6);
+    expect(apply(s, 0, { type: 'cards', cards: [opts[0].id] })).not.toBeNull();
+    expect(apply(s, 0, { type: 'cards', cards: [opts[0].id, opts[1].id] })).toBeNull();
+    expect(s.players[0].hand.length).toBe(4);
+    expect(s.graveyard.length).toBe(5);
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });
