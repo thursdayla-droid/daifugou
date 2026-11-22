@@ -24,6 +24,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '
 function cardHtml(c: Card, cls = '', attrs = ''): string {
   if (c.rank === 0) {
     const a = art('JK');
+    if (a) return `<div class="card has-img ${cls}" ${attrs}><img class="art" src="${a}" alt="JOKER"></div>`;
     return `<div class="card joker ${cls}" ${attrs}>${a ? `<img class="art" src="${a}">` : '<div class="jk"><b>★</b>JOKER</div>'}</div>`;
   }
   const red = c.suit === 'H' || c.suit === 'D';

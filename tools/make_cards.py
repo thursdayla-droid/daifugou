@@ -121,6 +121,19 @@ for s in SUITS:
         d.text((W / 2 - (bb[2] + bb[0]) / 2, H * 0.30 - (bb[3] + bb[1]) / 2), t, font=f, fill=(196, 150, 40, 255), stroke_width=10, stroke_fill=(90, 62, 10, 255))
         index(card, r, s)
         save(card, f'{s}{r}')
+# ジョーカー（依頼者の絵）：隅に たてに JOKER
+jk = Image.open(f'{SRC}/JK.png').convert('RGBA').resize((W, H), Image.LANCZOS)
+d = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+dr = ImageDraw.Draw(d)
+f = ImageFont.truetype(FONT, 128)
+y = 64
+for ch in 'JOKER':
+    bb = dr.textbbox((0, 0), ch, font=f)
+    dr.text((112 - (bb[0] + bb[2]) / 2, y - bb[1]), ch, font=f, fill=RED + (255,), stroke_width=6, stroke_fill=(250, 236, 205, 255))
+    y += (bb[3] - bb[1]) + 18
+jk.alpha_composite(d)
+jk.alpha_composite(d.rotate(180))
+save(jk, 'JK')
 back = Image.open(f'{SRC}/back.png').convert('RGBA')
 save(back, 'back')
 print('ok')
