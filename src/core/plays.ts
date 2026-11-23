@@ -15,6 +15,8 @@ export interface Play {
   suits: Suit[];
   hasJoker: boolean;
   jokerOnly: boolean;
+  /** ジョーカー入りの階段：いちばん下の値の 候補 */
+  lows?: number[];
 }
 
 export interface FieldCtx {
@@ -50,14 +52,33 @@ export function analyzePlay(cards: Card[]): Play | null {
     return { ...base, kind: 'set', rank: r, value: rankValue(r) };
   }
   // 階段：同じマーク3枚以上の続き数字。【仮】ジョーカーは 階段に 使えない
-  // 階段は 革命の 4枚だけ（2026-11-22 依頼者）
-  if (n === 4 && jokers === 0 && new Set(suits).size === 1) {
-    const vals = naturals.map((c) => rankValue(c.rank)).sort((a, b) => a - b);
-    for (let i = 1; i < vals.length; i++) if (vals[i] !== vals[i - 1] + 1) return null;
-    const low = naturals.find((c) => rankValue(c.rank) === vals[0])!;
-    return { ...base, kind: 'stair', rank: low.rank, value: vals[0] };
+  // 階段は 革命の 4枚だけ（2026-11-22 依頼者）。ジョーカーも 使える（9の代わりは だめ。2026-11-23 依頼者）
+  if (n === 4 && naturals.length >= 1 && new Set(suits).size === 1) {
+    const lows = stairLows(naturals.map((c) => rankValue(c.rank)));
+    if (lows.length === 0) return null;
+    // ジョーカーで 上にも下にも のばせる時は 強いほう（出す時に 場に合わせて 選び直す）
+    const v = lows[lows.length - 1];
+    return { ...base, kind: 'stair', rank: valueToRank(v), value: v, lows };
   }
   return null;
+}
+
+/** 階段（4枚）の いちばん下の値の 候補。ジョーカーは 足りない所を うめる（9＝値9 には ならない） */
+export function stairLows(vals: number[]): number[] {
+  const set = new Set(vals);
+  if (set.size !== vals.length) return [];
+  const out: number[] = [];
+  for (let low = 3; low + 3 <= 15; low++) {
+    let ok = true;
+    for (const v of vals) if (v < low || v > low + 3) ok = false;
+    for (let v = low; v <= low + 3 && ok; v++) if (!set.has(v) && v === 9) ok = false;
+    if (ok) out.push(low);
+  }
+  return out;
+}
+
+function valueToRank(v: number): number {
+  return v === 14 ? 1 : v === 15 ? 2 : v;
 }
 
 /** 場に出せるか（上がり禁止は別に見る） */
@@ -75,6 +96,7 @@ export function canBeat(ctx: FieldCtx, play: Play): boolean {
   if (play.value === 16) return true;
   if (play.kind === 'single' && play.hasJoker) return true;
   if (ctx.seqBind && f.kind !== 'stair') return play.value === nextValue(ctx, f.value);
+  if (play.lows) return play.lows.some((v) => (isInverted(ctx) ? v < f.value : v > f.value));
   return isInverted(ctx) ? play.value < f.value : play.value > f.value;
 }
 
@@ -155,12 +177,13 @@ export function enumeratePlays(hand: Card[]): Play[] {
   for (const s of suits) {
     const byVal = new Map<number, Card>();
     for (const c of hand) if (c.suit === s) byVal.set(rankValue(c.rank), c);
-    for (let start = 3; start <= 15; start++) {
-      const run: Card[] = [];
-      for (let v = start; v <= 15 && byVal.has(v); v++) {
-        run.push(byVal.get(v)!);
-        if (run.length === 4) out.push(analyzePlay([...run])!);
-      }
+    for (let low = 3; low + 3 <= 15; low++) {
+      const nat: Card[] = [];
+      for (let v = low; v <= low + 3; v++) if (byVal.has(v)) nat.push(byVal.get(v)!);
+      const need = 4 - nat.length;
+      if (need > jokers.length || nat.length === 0) continue;
+      const p = analyzePlay([...nat, ...jokers.slice(0, need)]);
+      if (p && !out.some((q) => q.kind === 'stair' && q.cards.map((c) => c.id).sort().join() === p.cards.map((c) => c.id).sort().join())) out.push(p);
     }
   }
   return out;

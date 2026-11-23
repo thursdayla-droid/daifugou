@@ -328,6 +328,14 @@ function doPlay(s: GameState, who: number, ids: string[]): string | null {
   if (!play) return 'その組み合わせは出せません';
   if (!canBeat(fieldCtx(s), play)) return '場のカードより強くないと出せません';
   if (isForbiddenFinish(play, p.hand.length)) return '8・ジョーカーでは上がれません';
+  // ジョーカー入りの階段：場に勝てる中で いちばん強い 並びにする
+  if (play.lows) {
+    const inv = s.revolution !== s.elevenBack;
+    const ok = play.lows.filter((v) => !s.field || (inv ? v < s.field.value : v > s.field.value));
+    const pick = inv ? Math.min(...ok) : Math.max(...ok);
+    play.value = pick;
+    play.rank = pick === 14 ? 1 : pick === 15 ? 2 : pick;
+  }
   removeCards(p.hand, ids);
   const prev = s.field;
   if (prev) s.fieldPile.push(...prev.cards);

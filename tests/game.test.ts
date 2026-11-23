@@ -47,7 +47,7 @@ describe('出し方', () => {
   });
   it('列挙', () => {
     const ps = enumeratePlays(['S3', 'S4', 'S5', 'H5', 'JK1'].map(c));
-    expect(ps.some((p) => p.kind === 'stair')).toBe(false);
+    expect(ps.some((p) => p.kind === 'stair')).toBe(true); // ♠3・4・5＋ジョーカー（6の代わり）
     expect(enumeratePlays(['S3', 'S4', 'S5', 'S6', 'S7'].map(c)).filter((p) => p.kind === 'stair').length).toBe(2);
     expect(ps.some((p) => p.kind === 'set' && p.rank === 5 && p.count === 3)).toBe(true);
   });
@@ -291,6 +291,16 @@ describe('効果', () => {
     expect(s.revolution).toBe(true);
     expect(s.field).not.toBeNull();
     expect(s.turn).toBe(1);
+  });
+  it('ジョーカー入りの 階段革命', () => {
+    expect(P('H7', 'H8', 'H9', 'JK1').kind).toBe('stair');
+    expect(analyzePlay(['H7', 'H8', 'H10', 'JK1'].map(c))).toBeNull(); // ジョーカーは 9に なれない
+    expect(P('H7', 'H8', 'H11', 'JK1')).toBeNull;
+    const s = setup([['H7', 'H8', 'H9', 'JK1', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
+    expect(apply(s, 0, { type: 'play', cards: ['H7', 'H8', 'H9', 'JK1'] })).toBeNull();
+    expect(s.revolution).toBe(true);
+    expect(s.pending).toBeNull();
+    expect(enumeratePlays(['H7', 'H8', 'H9', 'JK1'].map(c)).some((p) => p.kind === 'stair')).toBe(true);
   });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
