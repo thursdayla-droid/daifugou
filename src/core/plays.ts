@@ -115,7 +115,8 @@ export function makesSeqBind(ctx: { revolution: boolean; elevenBack: boolean }, 
 /** 8・ジョーカーで 上がれない */
 export function isForbiddenFinish(play: Play, handSize: number): boolean {
   if (play.count !== handSize) return false;
-  if (play.hasJoker) return true;
+  // ジョーカーだけで 上がるのは だめ。ほかのカードと 組み合わせた時は 上がってよい（2026-11-23 依頼者）
+  if (play.jokerOnly) return true;
   if (play.kind !== 'stair' && play.rank === 8) return true; // 階段は 効果なしなので 中の8で 上がってもよい【仮】
   return false;
 }

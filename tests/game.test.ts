@@ -42,6 +42,8 @@ describe('出し方', () => {
   it('上がり禁止', () => {
     expect(isForbiddenFinish(P('S8'), 1)).toBe(true);
     expect(isForbiddenFinish(P('JK1'), 1)).toBe(true);
+    expect(isForbiddenFinish(P('H3', 'JK1'), 2)).toBe(false); // ジョーカー入りの組み合わせなら 上がれる
+    expect(isForbiddenFinish(P('H8', 'JK1'), 2)).toBe(true); // 8 は だめ
     expect(isForbiddenFinish(P('S8'), 2)).toBe(false);
     expect(isForbiddenFinish(P('S6', 'S7', 'S8', 'S9'), 4)).toBe(false);
   });
