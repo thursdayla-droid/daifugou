@@ -278,6 +278,20 @@ describe('効果', () => {
     expect(apply(s, t2, { type: 'play', cards: ['S1'] })).toBeNull();
     expect(s.bind).toEqual(['S']);
   });
+  it('4を3枚＋ジョーカーで 革命：トレードは 起きない', () => {
+    const s = setup([['S4', 'H4', 'D4', 'JK1', 'S9', 'S10'], ['H5', 'H6', 'H7', 'H8'], ['D5', 'D6']]);
+    apply(s, 0, { type: 'play', cards: ['S4', 'H4', 'D4', 'JK1'] });
+    expect(s.revolution).toBe(true);
+    expect(s.pending).toBeNull();
+    expect(s.turn).toBe(1);
+  });
+  it('8を4枚で 革命：8切りは 起きない', () => {
+    const s = setup([['S8', 'H8', 'D8', 'C8', 'S9'], ['H5', 'H6'], ['D5', 'D6']]);
+    apply(s, 0, { type: 'play', cards: ['S8', 'H8', 'D8', 'C8'] });
+    expect(s.revolution).toBe(true);
+    expect(s.field).not.toBeNull();
+    expect(s.turn).toBe(1);
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });
