@@ -329,3 +329,12 @@ body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx
 .badge.on-bind { background: linear-gradient(180deg, #fffaf0, #e9dcc0); color: #2a2216; border-color: #fff; font-weight: 800; }
 .badge.on-bind b { font-size: 14px; }
 .badge.on-bind .sr { color: #c2162e; } .badge.on-bind .sb { color: #111; }
+
+/* 人数が多い時は 相手の枠を 小さく（2026-11-23 最大12人） */
+.opps.many { gap: 4px; }
+.opps.many .opp { flex: 1 1 22%; max-width: 24.5%; padding: 4px 3px; border-radius: 9px; }
+.opps.many .opp .on { font-size: 10px; }
+.opps.many .opp .oc { font-size: 15px; }
+.opps.many .opp .os { font-size: 10px; min-height: 1em; }
+.opps.lots .opp { flex: 1 1 18%; max-width: 19.5%; }
+.opps.lots .opp .oc { font-size: 13px; }

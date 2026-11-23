@@ -547,7 +547,7 @@ function renderGame(v: PlayerView) {
   app.innerHTML = `
   <div class="game">
     <div class="top">
-      <div class="opps">${opps
+      <div class="opps ${opps.length > 5 ? 'many' : ''} ${opps.length > 8 ? 'lots' : ''}">${opps
         .map((i) => {
           const p = v.players[i];
           const st = statusOf(v, i);

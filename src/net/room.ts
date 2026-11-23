@@ -17,8 +17,8 @@ export type HostMsg =
 
 export type ClientMsg = { t: 'hello'; name: string } | { t: 'act'; action: Action } | { t: 'again' };
 
-export const MAX_PLAYERS = 6;
-export const CPU_NAMES = ['CPU アリス', 'CPU ボブ', 'CPU キング', 'CPU クイーン', 'CPU ジャック'];
+export const MAX_PLAYERS = 12; // 2026-11-23 依頼者「12人ぐらいまで」
+export const CPU_NAMES = ['CPU アリス', 'CPU ボブ', 'CPU キング', 'CPU クイーン', 'CPU ジャック', 'CPU エース', 'CPU ジョー', 'CPU ルビー', 'CPU サファイア', 'CPU ゴールド', 'CPU シルバー'];
 
 export class Room {
   seats: Seat[] = [];

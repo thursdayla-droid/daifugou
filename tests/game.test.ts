@@ -332,7 +332,7 @@ describe('効果', () => {
 describe('CPUだけで最後まで', () => {
   it('たくさんの対戦が止まらずに終わる', () => {
     for (let seed = 1; seed <= 300; seed++) {
-      const n = 2 + (seed % 5);
+      const n = 2 + (seed % 11); // 2〜12人
       const s = newGame(Array.from({ length: n }, (_, i) => ({ name: `C${i}`, cpu: true })), seed);
       let r = seed;
       const rnd = () => ((r = (r * 1103515245 + 12345) % 2147483648) / 2147483648);
