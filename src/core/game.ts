@@ -51,6 +51,7 @@ export interface AfterPlay {
   actor: number;
   skip: number;
   cut: boolean;
+  cutMsg?: string;
   /** これから出す効果（階段は 弱い順に 1枚ずつ） */
   queue: EffectItem[];
 }
@@ -359,6 +360,12 @@ function doPlay(s: GameState, who: number, ids: string[]): string | null {
     log(s, { kind: 'revolution', player: who, title: s.revolution ? '革命！' : '革命返し！', text: s.revolution ? '革命！ 強さが逆になります' : '革命返し！' });
   }
   s.after = { actor: who, skip: 0, cut: false, queue: effectQueue(play) };
+  // ジョーカー1枚に スペードの3を出したら 場が流れる（スペ3返し。2026-11-23 依頼者）
+  if (prev && prev.kind === 'single' && prev.jokerOnly && play.kind === 'single' && play.rank === 3) {
+    s.after.cut = true;
+    s.after.cutMsg = 'スペ3返し！ 場が流れました';
+    log(s, { kind: 'effect', player: who, title: 'スペ3返し', text: `${nm(s, who)} の スペ3返し！` });
+  }
   runEffects(s);
   return null;
 }
@@ -467,7 +474,7 @@ function finishAfter(s: GameState) {
   checkFinishes(s, a.actor);
   if (s.over) return;
   if (a.cut) {
-    clearField(s, '8切りで 場が流れました');
+    clearField(s, a.cutMsg ?? '8切りで 場が流れました');
     s.turn = s.players[a.actor].out ? nextActive(s, a.actor) : a.actor;
     beginTurn(s);
     return;
@@ -477,13 +484,8 @@ function finishAfter(s: GameState) {
     t = nextActive(s, t);
     if (k < a.skip && t !== a.actor && !s.players[t].out) log(s, { kind: 'info', player: t, text: `${nm(s, t)} は とばされました` });
   }
-  if (t === s.fieldOwner && !s.players[t].out) {
-    clearField(s, '場が流れました');
-    s.turn = t;
-    beginTurn(s);
-    return;
-  }
-  // 場を出した人が上がっていて、ほかの全員がもう回った場合
+  // 5飛びで 一周して 自分に戻っても 場は 流れない。2周目として その人の番（2026-11-23 依頼者）
+  if (t === a.actor && a.skip > 0) log(s, { kind: 'info', player: t, text: `一周して ${nm(s, t)} の番（場は そのまま）` });
   s.turn = t;
 }
 

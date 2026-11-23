@@ -43,6 +43,7 @@ export const THEMES: Record<string, Theme> = {
   'マークしばり': { color: '#7a7f99', color2: '#e6e8f5', glyph: G.chain, anim: 'drop' },
   '革命！': { color: '#ff2a2a', color2: '#ffd700', glyph: G.revolution, anim: 'spin' },
   '革命返し！': { color: '#ffb300', color2: '#fff3b0', glyph: G.revolution, anim: 'spin' },
+  'スペ3返し': { color: '#1c1c1c', color2: '#e8e8e8', glyph: G.slash, anim: 'slash' },
   '当たり！': { color: '#1fbf4a', color2: '#c4ffd2', glyph: G.hit, anim: 'drop' },
   'はずれ…': { color: '#55606e', color2: '#c9d0d8', glyph: G.miss, anim: 'drop' },
 };

@@ -320,3 +320,12 @@ body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx
 .act-name span { font-size: clamp(26px, 8vw, 40px); }
 @keyframes actCard { 0% { transform: translateY(-14vh) scale(.7); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
 .act-flash { animation-duration: .2s; opacity: .6; }
+
+/* 発生中の 状態の札（2026-11-23）。色は 発動演出と同じ */
+.badge.on-q { background: linear-gradient(180deg, #ff6fb3, #b8165f); color: #fff; border-color: #ffc2e0; font-weight: 800; }
+.badge.on-rev { background: linear-gradient(180deg, #ff4a4a, #9c0f0f); color: #fff; border-color: #ffd700; font-weight: 800; }
+.badge.on-j { background: linear-gradient(180deg, #6a78ff, #2733b8); color: #fff; border-color: #c3c9ff; font-weight: 800; }
+.badge.on-seq { background: linear-gradient(180deg, #a57dff, #5a2fc8); color: #fff; border-color: #e0d2ff; font-weight: 800; }
+.badge.on-bind { background: linear-gradient(180deg, #fffaf0, #e9dcc0); color: #2a2216; border-color: #fff; font-weight: 800; }
+.badge.on-bind b { font-size: 14px; }
+.badge.on-bind .sr { color: #c2162e; } .badge.on-bind .sb { color: #111; }

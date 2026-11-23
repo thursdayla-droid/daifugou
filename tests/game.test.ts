@@ -304,6 +304,20 @@ describe('効果', () => {
     expect(s.pending).toBeNull();
     expect(enumeratePlays(['H7', 'H8', 'H9', 'JK1'].map(c)).some((p) => p.kind === 'stair')).toBe(true);
   });
+  it('4人で 5を3枚：流れずに 2周目で 自分の番', () => {
+    const s = setup([['S5', 'H5', 'D5', 'S9', 'S10'], ['H7', 'H6'], ['D7', 'D6'], ['C7', 'C6']]);
+    apply(s, 0, { type: 'play', cards: ['S5', 'H5', 'D5'] });
+    expect(s.turn).toBe(0);
+    expect(s.field).not.toBeNull();
+  });
+  it('ジョーカーに スペ3で 場が流れて その人から', () => {
+    const s = setup([['JK1', 'S9', 'S10'], ['S3', 'H6', 'H7'], ['D7', 'D6']]);
+    apply(s, 0, { type: 'play', cards: ['JK1'] });
+    apply(s, 1, { type: 'play', cards: ['S3'] });
+    if (s.pending) apply(s, 1, { type: 'decide', use: false });
+    expect(s.field).toBeNull();
+    expect(s.turn).toBe(1);
+  });
   it('トレード', () => {
     const s = setup([['S4', 'S3'], ['H5', 'H6'], ['D5', 'D6']]);
     apply(s, 0, { type: 'play', cards: ['S4'] });

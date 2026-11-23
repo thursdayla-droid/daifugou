@@ -530,15 +530,16 @@ function renderGame(v: PlayerView) {
   }
   const t = turnText(v);
   const badges: string[] = [];
-  badges.push(`<span class="badge">${v.direction === 1 ? '↻ 時計回り' : '↺ 逆回り'}</span>`);
-  if (v.revolution) badges.push('<span class="badge hot">革命中</span>');
-  if (v.elevenBack) badges.push('<span class="badge blue">イレブンバック中</span>');
+  // 発生中のものは 色つき（2026-11-23 依頼者）。色は 発動演出と そろえる
+  badges.push(`<span class="badge ${v.direction === 1 ? '' : 'on-q'}">${v.direction === 1 ? '↻ 時計回り' : '↺ 逆回り'}</span>`);
+  if (v.revolution) badges.push('<span class="badge on-rev">革命中</span>');
+  if (v.elevenBack) badges.push('<span class="badge on-j">イレブンバック中</span>');
   if (v.seqBind && v.field) {
     const nv = nextValue(v, v.field.value);
     const lbl = nv >= 3 && nv <= 13 ? rankLabel(nv) : nv === 14 ? 'A' : nv === 15 ? '2' : 'なし';
-    badges.push(`<span class="badge hot">階段しばり 次は ${lbl}</span>`);
+    badges.push(`<span class="badge on-seq">階段しばり 次は ${lbl}</span>`);
   }
-  if (v.bind) badges.push(`<span class="badge">マークしばり ${v.bind.map((s) => SUIT_MARK[s]).join('')}</span>`);
+  if (v.bind) badges.push(`<span class="badge on-bind">マークしばり ${v.bind.map((s) => `<b class="${s === 'H' || s === 'D' ? 'sr' : 'sb'}">${SUIT_MARK[s]}</b>`).join('')}</span>`);
 
   badges.push(`<span class="badge" id="menu" style="cursor:pointer">≡</span>`);
   const logLines = v.events.filter((e) => e.text && (e.kind !== 'info' || e.only === v.me)).slice(-3);
@@ -826,7 +827,7 @@ function renderMenu() {
 const RULES: [string, string][] = [
   ['3 ドロー3（任意）', '使うか 先に選ぶ。使うと 墓地からランダムで3枚 見て、好きな1枚を 必ず 手札に加える（3を2枚なら 6枚見て2枚、3枚なら 9枚見て3枚）'],
   ['4 トレード4（強制）', '次の人と 手札を伏せて、お互いに1枚 選んで 交換する（4を2枚なら 2枚、3枚なら 3枚）'],
-  ['5 5飛び（強制）', '次の人を とばす（2枚なら 2人とばして 4番目の人の番）'],
+  ['5 5飛び（強制）', '次の人を とばす（2枚なら 2人とばして 4番目の人の番）。一周して 自分に戻っても 場は流れず その人の番'],
   ['6 ケメゾディア', '手札に 6 が4枚 そろったら そのゲームの勝者'],
   ['7 7渡し（強制）', 'いらないカードを 次の人に渡す（出した枚数ぶん）'],
   ['8 8切り（強制）', '出した瞬間に 場が流れる。もう一度 出せる'],
@@ -838,7 +839,7 @@ const RULES: [string, string][] = [
   ['A エースカウンター（任意）', '7渡しを受ける時、エースを捨てて 逆に相手へ1枚 渡せる。7を2枚出されたら エース2枚で 2枚 返せる（エースが1枚なら 1枚返して、残りの1枚は 受け取る）'],
   ['2', '効果なし'],
   ['ジョーカー（1枚）', '一番強い。2枚以上で出す時は ほかの数字の代わりになれる（9 以外）'],
-  ['スペードの3', 'ジョーカー1枚の時は スペードの3だけ 出せる（しばり中でも 出せる）'],
+  ['スペードの3', 'ジョーカー1枚の時は スペードの3だけ 出せる（しばり中でも 出せる）。出したら 場が流れて その人から'],
   ['上がり禁止', '8・ジョーカーだけでは 上がれない（ジョーカーを ほかのカードと 組み合わせれば 上がれる）'],
   ['階段しばり', '前の人の 続きの数字を出すと、場が流れるまで 続きの数字しか出せない（例：5→6 なら 次は 7 だけ）。2枚出しでも起きる。強さが逆の時は 弱い方へ（6→5 なら 次は 4）。ジョーカーは 出せる。同じマークなら マークしばりも かかる'],
   ['しばり', '前の人と 同じマークで出すと、場が流れるまで そのマークしか出せない（片しばりなし）'],
