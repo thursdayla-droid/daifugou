@@ -243,7 +243,7 @@ function runFx() {
     showActivate(layer, f.title, ch, () => {
       fxBusy = false;
       runFx();
-    }, Math.round(850 * fast)); // 2026-11-22 依頼者「テンポ悪い。軽めで」
+    }, Math.round(1300 * fast)); // 2026-11-22 軽めに → 2026-11-23 依頼者「もう少し長く。一瞬でわかりづらい」
     return;
   }
   if (f.t === 'nine') {
