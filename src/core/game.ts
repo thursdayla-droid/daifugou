@@ -480,12 +480,22 @@ function finishAfter(s: GameState) {
     return;
   }
   let t = a.actor;
+  let passedSelf = false;
   for (let k = 0; k <= a.skip; k++) {
     t = nextActive(s, t);
+    if (k < a.skip && t === a.actor) passedSelf = true;
     if (k < a.skip && t !== a.actor && !s.players[t].out) log(s, { kind: 'info', player: t, text: `${nm(s, t)} は とばされました` });
   }
-  // 5飛びで 一周して 自分に戻っても 場は 流れない。2周目として その人の番（2026-11-23 依頼者）
-  if (t === a.actor && a.skip > 0) log(s, { kind: 'info', player: t, text: `一周して ${nm(s, t)} の番（場は そのまま）` });
+  // 5飛び（2026-11-26 依頼者）：
+  //  ・とんだ先が ちょうど自分 → 場が流れて 自分から
+  //  ・自分を 通りこした → 場は そのまま 2周目
+  if (a.skip > 0 && t === a.actor && !s.players[t].out) {
+    clearField(s, '一周して 自分の番。場が流れました');
+    s.turn = t;
+    beginTurn(s);
+    return;
+  }
+  if (passedSelf) log(s, { kind: 'info', player: t, text: `一周して 2周目（場は そのまま）。${nm(s, t)} の番` });
   s.turn = t;
 }
 
