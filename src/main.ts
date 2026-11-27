@@ -505,6 +505,12 @@ function renderGame(v: PlayerView) {
   const n = v.players.length;
   const opps: number[] = [];
   for (let k = 1; k < n; k++) opps.push((v.me + k) % n);
+  // 上の列は 自分も入れて、回る順番に 並べる（2026-11-27 依頼者「自分が 誰の次か わからない」）
+  const seats: number[] = [];
+  for (let k = 0; k < n; k++) seats.push((((v.me + k * v.direction) % n) + n) % n);
+  const activeSeats = seats.filter((i) => !v.players[i].out || i === v.me);
+  const nextOf = activeSeats.length > 1 ? activeSeats[1] : -1;
+  const prevOf = activeSeats.length > 2 ? activeSeats[activeSeats.length - 1] : -1;
   const inv = isInverted(v);
   const hand = sortHand(v.hand, inv);
   const mode = selectionMode(v);
@@ -547,11 +553,12 @@ function renderGame(v: PlayerView) {
   app.innerHTML = `
   <div class="game">
     <div class="top">
-      <div class="opps ${opps.length > 5 ? 'many' : ''} ${opps.length > 8 ? 'lots' : ''}">${opps
+      <div class="opps ${seats.length > 6 ? 'many' : ''} ${seats.length > 9 ? 'lots' : ''}">${seats
         .map((i) => {
           const p = v.players[i];
           const st = statusOf(v, i);
-          return `<div class="opp ${v.waiting === i && !v.over ? 'turn' : ''} ${p.out ? 'out' : ''}" data-p="${i}">
+          const tag = i === v.me ? '<i class="otag me">あなた</i>' : i === nextOf ? '<i class="otag nx">つぎ</i>' : i === prevOf ? '<i class="otag pv">まえ</i>' : '';
+          return `<div class="opp ${i === v.me ? 'self' : ''} ${v.waiting === i && !v.over ? 'turn' : ''} ${p.out ? 'out' : ''}" ${i === v.me ? '' : `data-p="${i}"`}>${tag}
             <div class="on">${esc(p.name)}</div>
             <div class="oc">${p.count}<small> 枚</small></div>
             <div class="os ${st === 'パス' ? 'pass' : ''}">${st}</div></div>`;

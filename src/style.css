@@ -338,3 +338,14 @@ body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx
 .opps.many .opp .os { font-size: 10px; min-height: 1em; }
 .opps.lots .opp { flex: 1 1 18%; max-width: 19.5%; }
 .opps.lots .opp .oc { font-size: 13px; }
+
+/* 上の列に 自分も（2026-11-27）。回る順番：あなた → つぎ → … → まえ */
+.opp.self { border-color: #7fb8ff; background: rgba(20,40,70,.75); }
+.opp.self.turn { border-color: var(--gold-l); }
+.otag { position: absolute; top: -7px; left: 50%; translate: -50% 0; font-style: normal; font-size: 10px; font-weight: 900; padding: 1px 7px; border-radius: 99px; white-space: nowrap; letter-spacing: .05em; }
+.otag.me { background: #7fb8ff; color: #06203d; }
+.otag.nx { background: var(--gold-l); color: #2a1c00; }
+.otag.pv { background: #6d6555; color: #fff; }
+.opps { padding-top: 6px; row-gap: 10px; }
+.opps.many .opp { padding-top: 9px; }
+.opps.many .otag { font-size: 9px; top: -6px; padding: 0 5px; }
