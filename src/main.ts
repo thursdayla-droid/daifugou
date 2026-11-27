@@ -508,9 +508,6 @@ function renderGame(v: PlayerView) {
   // 上の列は 自分も入れて、回る順番に 並べる（2026-11-27 依頼者「自分が 誰の次か わからない」）
   const seats: number[] = [];
   for (let k = 0; k < n; k++) seats.push((((v.me + k * v.direction) % n) + n) % n);
-  const activeSeats = seats.filter((i) => !v.players[i].out || i === v.me);
-  const nextOf = activeSeats.length > 1 ? activeSeats[1] : -1;
-  const prevOf = activeSeats.length > 2 ? activeSeats[activeSeats.length - 1] : -1;
   const inv = isInverted(v);
   const hand = sortHand(v.hand, inv);
   const mode = selectionMode(v);
@@ -557,7 +554,7 @@ function renderGame(v: PlayerView) {
         .map((i) => {
           const p = v.players[i];
           const st = statusOf(v, i);
-          const tag = i === v.me ? '<i class="otag me">あなた</i>' : i === nextOf ? '<i class="otag nx">つぎ</i>' : i === prevOf ? '<i class="otag pv">まえ</i>' : '';
+          const tag = ''; // 2026-11-27 依頼者「あなた・つぎ・まえ の文字は いらない」（自分は 青い枠で 分かる）
           return `<div class="opp ${i === v.me ? 'self' : ''} ${v.waiting === i && !v.over ? 'turn' : ''} ${p.out ? 'out' : ''}" ${i === v.me ? '' : `data-p="${i}"`}>${tag}
             <div class="on">${esc(p.name)}</div>
             <div class="oc">${p.count}<small> 枚</small></div>
