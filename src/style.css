@@ -348,3 +348,7 @@ body.deciding #fx .banner, body.deciding #fx .fx-move-cap, body.deciding #fx .fx
 .otag.pv { background: #6d6555; color: #fff; }
 .opps { padding-top: 6px; row-gap: 10px; }
 .opps.many .otag { font-size: 9px; top: -6px; padding: 0 5px; }
+
+.otag.first { background: var(--gold-l); color: #2a1c00; }
+.otag.last { background: #6d6555; color: #fff; }
+.opps.many .opp { padding-top: 9px; }

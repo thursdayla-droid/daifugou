@@ -73,6 +73,8 @@ export interface GameState {
   passed: boolean[];
   bind: Suit[] | null;
   seqBind: boolean;
+  /** この回（場が流れてから）最初に出した人 */
+  leader: number | null;
   revolution: boolean;
   elevenBack: boolean;
   graveyard: Card[];
@@ -134,6 +136,7 @@ export function newGame(players: { name: string; cpu: boolean }[], seed: number)
     passed: players.map(() => false),
     bind: null,
     seqBind: false,
+    leader: null,
     revolution: false,
     elevenBack: false,
     graveyard: [],
@@ -248,6 +251,7 @@ function clearField(s: GameState, why: string) {
   s.fieldPile = [];
   s.bind = null;
   s.seqBind = false;
+  s.leader = null;
   s.passed = s.players.map(() => false);
   log(s, { kind: 'flow', text: why });
   // イレブンバックは 場が流れたら終わり（2026-11-22 決定）
@@ -339,6 +343,7 @@ function doPlay(s: GameState, who: number, ids: string[]): string | null {
   }
   removeCards(p.hand, ids);
   const prev = s.field;
+  if (!prev) s.leader = who;
   if (prev) s.fieldPile.push(...prev.cards);
   s.field = play;
   s.fieldOwner = who;
@@ -666,6 +671,7 @@ export interface PlayerView {
   fieldOwner: number | null;
   bind: Suit[] | null;
   seqBind: boolean;
+  leader: number | null;
   revolution: boolean;
   elevenBack: boolean;
   graveyardCount: number;
@@ -709,6 +715,7 @@ export function viewFor(s: GameState, me: number): PlayerView {
     fieldOwner: s.fieldOwner,
     bind: s.bind,
     seqBind: s.seqBind,
+    leader: s.field ? (s.leader ?? null) : s.over ? null : s.turn,
     revolution: s.revolution,
     elevenBack: s.elevenBack,
     graveyardCount: s.graveyard.length,
